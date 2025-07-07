@@ -1,0 +1,43 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /mailapp
+
+spring:
+  mail:
+    host: localhost
+    port: 25
+    username: testmail
+    password: a
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: false
+
+  datasource:
+    url: "jdbc:mysql://localhost:3306/mail_db"
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+mail:
+  imap:
+    protocol: imap
+    host: localhost
+    port: 143
+    username: testmail
+    password: a
+
+jwt:
+  signerKey: "qAZt3VopZNhsem0ytLp54iL96gU8UQX6fwNpT8Bqsx0tUU0w0EDysSFqHivimkuT"
+  valid-duration: 3600 # in seconds
+  refreshable-duration: 36000 # in seconds
+
+logging:
+  level:
+    org.springframework.security.web: DEBUG
