@@ -1,13 +1,11 @@
 package com.nghhieu27.mail.demo.entity;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
+import java.util.Date;
 
 @Data
 @Builder
@@ -15,13 +13,9 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
-public class User {
+public class InvalidatedToken {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
-    String email;
-    String password;
-    String firstName;
-    String lastName;
+    Date expiryTime;
 }

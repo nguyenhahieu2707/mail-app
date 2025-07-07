@@ -1,18 +1,14 @@
-package com.nghhieu27.mail.demo.dto.response;
+package com.nghhieu27.mail.demo.dto.request;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserResponse {
-    String id;
+public class AuthenticationRequest {
     String email;
-    String firstName;
-    String lastName;
+    String password;
 }
