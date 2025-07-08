@@ -45,8 +45,8 @@ function ComposeMail() {
                         type="text"
                         className="form-control"
                         id="subject"
-                        name="subject"
-                        value={mail.subject}
+                        name="sub"
+                        value={mail.sub}
                         onChange={handleChange}
                     />
                 </div>

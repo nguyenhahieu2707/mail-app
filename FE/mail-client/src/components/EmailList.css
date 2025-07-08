@@ -1,0 +1,261 @@
+/* Переменные для цветов */
+:root {
+    --background-light: #ffffff;
+    --text-light: #213547;
+    --border-light: #e0e0e0;
+    --hover-light: #f5f5f5;
+    --link-light: #007bff;
+    --link-hover-light: #0056b3;
+
+    --background-dark: #1a1a1a;
+    --text-dark: rgba(255, 255, 255, 0.87);
+    --border-dark: #3a3a3a;
+    --hover-dark: #2a2a2a;
+    --header-bg-dark: #242424;
+    --link-dark: #74a0ff;
+    --link-hover-dark: #9bbfff;
+    --unread-dark: #2c3e50;
+
+    --font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    --border-radius: 8px;
+}
+
+/* Giao diện mặc định (Dark mode) */
+body {
+    /* background-color: #1a1a1a; */
+    background-color: var(--background-dark);
+    color: var(--text-dark);
+    font-family: var(--font-family);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.email-list-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.email-list-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-dark);
+}
+
+.header-icon {
+    font-size: 2rem;
+    color: var(--link-dark);
+}
+
+.email-list-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.table-wrapper {
+    background-color: var(--header-bg-dark);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.email-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-dark);
+}
+
+.email-table th,
+.email-table td {
+    padding: 1rem 1.25rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.email-table thead {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.email-table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.email-table tbody tr {
+    transition: background-color 0.2s ease-in-out;
+}
+
+.email-table tbody tr:hover {
+    background-color: var(--hover-dark);
+}
+
+.email-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Kiểu cho dòng chưa đọc */
+.email-table tr.unread {
+    background-color: var(--unread-dark);
+    font-weight: bold;
+}
+
+.email-table tr.unread:hover {
+    background-color: #34495e;
+}
+
+.sender-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--link-dark);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.subject-link {
+    color: var(--link-dark);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.subject-link:hover {
+    color: var(--link-hover-dark);
+    text-decoration: underline;
+}
+
+.date-cell {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+}
+
+/* Loading Spinner */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem;
+    gap: 1rem;
+    color: var(--text-dark);
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-bottom-color: var(--link-dark);
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error Message */
+.error-container {
+    background-color: #4a2121;
+    color: #ffacac;
+    border: 1px solid #8e3a3a;
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    font-size: 1rem;
+    margin: 2rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Giao diện Light mode */
+@media (prefers-color-scheme: light) {
+    body {
+        background-color: var(--background-light);
+        color: var(--text-light);
+    }
+    .email-list-header {
+        border-bottom-color: var(--border-light);
+    }
+    .header-icon {
+        color: var(--link-light);
+    }
+    .table-wrapper {
+        background-color: var(--background-light);
+        border: 1px solid var(--border-light);
+    }
+    .email-table {
+        color: var(--text-light);
+    }
+    .email-table th,
+    .email-table td {
+        border-bottom-color: var(--border-light);
+    }
+    .email-table thead {
+        background-color: #f9f9f9;
+    }
+    .email-table th {
+        color: #666;
+    }
+    .email-table tbody tr:hover {
+        background-color: var(--hover-light);
+    }
+    .email-table tr.unread {
+        background-color: #eaf2ff;
+        font-weight: bold;
+    }
+    .email-table tr.unread:hover {
+        background-color: #dceaff;
+    }
+    .avatar-placeholder {
+        background-color: var(--link-light);
+    }
+    .subject-link {
+        color: var(--link-light);
+    }
+    .subject-link:hover {
+        color: var(--link-hover-light);
+    }
+    .date-cell {
+        color: #777;
+    }
+    .loading-container {
+        color: var(--text-light);
+    }
+    .spinner {
+        border-color: rgba(0, 0, 0, 0.1);
+        border-bottom-color: var(--link-light);
+    }
+    .error-container {
+        background-color: #fff2f2;
+        color: #c02727;
+        border-color: #ffc8c8;
+    }
+    .empty-state {
+        color: #888;
+    }
+}

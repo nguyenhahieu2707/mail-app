@@ -26,7 +26,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/users", "/auth/token", "auth/introspect", "/auth/logout", "/auth/refresh"
+            "/users", "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh", "/laoid"
     };
 
     @Autowired
@@ -70,6 +70,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of("http://localhost"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true); // nếu bạn gửi cookie hoặc auth header

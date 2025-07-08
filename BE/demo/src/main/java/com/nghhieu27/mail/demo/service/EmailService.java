@@ -12,6 +12,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -36,7 +37,9 @@ public class EmailService {
     public void sendMail(EmailRequest emailRequest){
         SimpleMailMessage simpleMailMessage = new SimpleMailMessage();
 
-        simpleMailMessage.setFrom("admin@localhost");
+        String fr = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        simpleMailMessage.setFrom(fr);
         simpleMailMessage.setTo(emailRequest.getTo());
         simpleMailMessage.setSubject(emailRequest.getSub());
         simpleMailMessage.setText(emailRequest.getBody());

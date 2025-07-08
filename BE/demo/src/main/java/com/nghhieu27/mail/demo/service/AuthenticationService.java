@@ -9,10 +9,7 @@ import java.util.UUID;
 
 import com.nghhieu27.mail.demo.Exception.AppException;
 import com.nghhieu27.mail.demo.Exception.ErrorCode;
-import com.nghhieu27.mail.demo.dto.request.AuthenticationRequest;
-import com.nghhieu27.mail.demo.dto.request.IntrospectRequest;
-import com.nghhieu27.mail.demo.dto.request.LogoutRequest;
-import com.nghhieu27.mail.demo.dto.request.RefreshRequest;
+import com.nghhieu27.mail.demo.dto.request.*;
 import com.nghhieu27.mail.demo.dto.response.AuthenticationResponse;
 import com.nghhieu27.mail.demo.dto.response.IntrospectResponse;
 import com.nghhieu27.mail.demo.entity.InvalidatedToken;
@@ -75,6 +72,19 @@ public class AuthenticationService {
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
         if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
+
+        var token = generateToken(user);
+
+        return AuthenticationResponse.builder().token(token).authenticated(true).build();
+    }
+
+    public AuthenticationResponse authenticate_LaoID(LaoIDRequest request) {
+        var user = userRepository
+                .findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+//        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
+//        if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         var token = generateToken(user);
 

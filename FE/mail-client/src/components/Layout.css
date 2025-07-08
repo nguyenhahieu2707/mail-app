@@ -1,0 +1,104 @@
+/* --- Main Layout --- */
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 64px;
+  background-color: var(--bg-secondary-color);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.brand-icon {
+  font-size: 1.5rem;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  color: var(--text-secondary-color);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--text-color);
+  background-color: var(--active-bg);
+}
+
+/* Kiểu cho NavLink khi đang active */
+.nav-link.active {
+  color: var(--primary-color);
+  background-color: var(--active-bg);
+  font-weight: 600;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-avatar {
+  font-size: 1.5rem;
+  color: var(--text-secondary-color);
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--danger-color);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.logout-button:hover {
+  background-color: rgba(229, 62, 62, 0.1);
+}
+
+.content {
+  flex-grow: 1;
+  overflow-y: auto; /* Cho phép cuộn nếu nội dung dài */
+}
+
+/* --- Auth Layout --- */
+.auth-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 2rem;
+}
