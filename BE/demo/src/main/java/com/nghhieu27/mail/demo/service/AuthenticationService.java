@@ -88,7 +88,9 @@ public class AuthenticationService {
 //        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
 //        if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
+        log.info("token  ");
         var token = generateToken(user);
+        log.info(token.toString());
 
         return AuthenticationResponse.builder().token(token).authenticated(true).build();
     }

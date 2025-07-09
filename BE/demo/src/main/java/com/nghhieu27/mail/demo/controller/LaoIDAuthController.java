@@ -2,6 +2,7 @@ package com.nghhieu27.mail.demo.controller;
 
 import com.nghhieu27.mail.demo.Exception.AppException;
 import com.nghhieu27.mail.demo.Exception.ErrorCode;
+import com.nghhieu27.mail.demo.dto.request.ApiResponse;
 import com.nghhieu27.mail.demo.dto.request.LaoIDRequest;
 import com.nghhieu27.mail.demo.dto.response.AuthenticationResponse;
 import com.nghhieu27.mail.demo.entity.User;
@@ -28,7 +29,7 @@ public class LaoIDAuthController {
     private static final String CLIENT_SECRET = "df1699140bcb456eaa6d85d54c5fbd79";
 
     @PostMapping
-    public ResponseEntity<?> handleLaoIdLogin(@RequestBody Map<String, String> body) {
+    public ApiResponse<AuthenticationResponse> handleLaoIdLogin(@RequestBody Map<String, String> body) {
         String code = body.get("code");
         if (code == null) {
             throw new AppException(ErrorCode.INVALID_ENUM_KEY);
@@ -39,19 +40,25 @@ public class LaoIDAuthController {
         // Step 1: Gọi verify để lấy access token
         String accessToken = getAccessTokenFromLaoId(code);
         if (accessToken == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Không thể lấy access token từ LaoID");
+            return ApiResponse.<AuthenticationResponse>builder()
+                    .code(444).build();
         }
 
         // Step 2: Gọi API lấy thông tin user
         Map<String, Object> userInfo = getUserInfoFromLaoId(accessToken);
         if (userInfo == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Không thể lấy thông tin người dùng từ LaoID");
+            return ApiResponse.<AuthenticationResponse>builder()
+                    .code(444).build();
         }
+        log.info("📦 LaoID userInfo: {}", userInfo);
+
 
         // Step 3: Lưu user vào DB nếu chưa có
         String email = extractEmail(userInfo);
+        log.info("email: "+email);
         if (email == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email không tồn tại trong thông tin LaoID");
+            return ApiResponse.<AuthenticationResponse>builder()
+                    .code(444).build();
         }
 
         User user = userRepository.findByEmail(email)
@@ -64,16 +71,20 @@ public class LaoIDAuthController {
         LaoIDRequest laoIDRequest = new LaoIDRequest(user.getEmail());
 
         // Step 4: Sinh JWT từ hệ thống bạn
-        String token = authenticationService.authenticate_LaoID(laoIDRequest).getToken();
+        //String token = authenticationService.authenticate_LaoID(laoIDRequest).getToken();
 
-        return ResponseEntity.ok(AuthenticationResponse.builder()
-                .token(token)
-                .authenticated(true)
-                .build());
+        return ApiResponse.<AuthenticationResponse>builder()
+                .result(authenticationService.authenticate_LaoID(laoIDRequest))
+                .build();
+
+//        return ResponseEntity.ok(AuthenticationResponse.builder()
+//                .token(token)
+//                .authenticated(true)
+//                .build());
     }
 
     private String getAccessTokenFromLaoId(String code) {
-        String url = "https://sso.laoid.net/api/v1/third-party/verify";
+        String url = "https://demo-sso.tinasoft.io/api/v1/third-party/verify";
 
         Map<String, String> payload = new HashMap<>();
         payload.put("code", code);
@@ -114,7 +125,7 @@ public class LaoIDAuthController {
 
 
     private Map<String, Object> getUserInfoFromLaoId(String accessToken) {
-        String url = "https://sso.laoid.net/api/v1/third-party/me";
+        String url = "https://demo-sso.tinasoft.io/api/v1/third-party/me";
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + accessToken);
