@@ -33,17 +33,39 @@ function Login() {
   };
   
   // Script cho LaoID vẫn giữ nguyên
+  // useEffect(() => {
+  //   const script = document.createElement('script');
+  //   script.src = 'https://demo-sso.tinasoft.io/laoid.auth.js';
+  //   script.async = true;
+  //   document.body.appendChild(script);
+
+  //   // Dọn dẹp script khi component bị hủy
+  //   return () => {
+  //     document.body.removeChild(script);
+  //   };
+  // }, []);
+
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://demo-sso.tinasoft.io/laoid.auth.js';
     script.async = true;
+    script.onload = () => {
+      const callbackUrl = 'http://localhost/laoid/auth/callback';
+      window.LaoIdSSO.init(
+        '660dfa27-5a95-4c88-8a55-abe1310bf579',
+        callbackUrl,
+        true
+      );
+    };
+
     document.body.appendChild(script);
 
-    // Dọn dẹp script khi component bị hủy
     return () => {
       document.body.removeChild(script);
     };
   }, []);
+
+
 
   return (
     <div className="login-container">
@@ -84,11 +106,18 @@ function Login() {
         </form>
         
         <div className="divider">hoặc</div>
-        
-        <button id="laoid-signin" className="laoid-button">
+        <button className="laoid-button" onClick={() => {
+          // Redirect đến URL login
+          window.location.href = `https://demo-sso.tinasoft.io/login?client_id=660dfa27-5a95-4c88-8a55-abe1310bf579&redirect_uri=http://localhost/laoid/auth/callback&use_callback_uri=true`;
+        }}>
           <FiGrid />
           <span>Đăng nhập với LaoID</span>
-        </button>
+        </button>  
+
+        {/* <button id="laoid-signin" className="laoid-button">
+          <FiGrid />
+          <span>Đăng nhập với LaoID</span>
+        </button> */}
       </div>
     </div>
   );

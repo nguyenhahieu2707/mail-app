@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/mailapp'; 
+const API_URL = 'http://localhost:8080'; 
 
 const authHeader = () => ({
     headers: {

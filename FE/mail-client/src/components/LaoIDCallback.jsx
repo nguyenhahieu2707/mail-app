@@ -9,7 +9,8 @@ export default function LaoIDCallback() {
     const code = params.get("authorization_code");
 
     if (code) {
-      fetch("http://localhost:8080/api/auth/laoid", {
+      console.log(code);
+      fetch("http://localhost:8080/laoid", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),

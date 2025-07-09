@@ -137,7 +137,7 @@ function App() {
       {/* Các route không cần xác thực */}
       <Route element={<AuthLayout />}>
         <Route path="/" element={<Login />} />
-        <Route path="/laoid/callback" element={<LaoIDCallback />} />
+        <Route path="/laoid/auth/callback" element={<LaoIDCallback />} />
         <Route path="/logout" element={<Logout />} />
       </Route>
 

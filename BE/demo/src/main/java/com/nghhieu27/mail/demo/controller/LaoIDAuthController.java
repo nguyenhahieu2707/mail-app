@@ -34,6 +34,8 @@ public class LaoIDAuthController {
             throw new AppException(ErrorCode.INVALID_ENUM_KEY);
         }
 
+        log.info(code);
+
         // Step 1: Gọi verify để lấy access token
         String accessToken = getAccessTokenFromLaoId(code);
         if (accessToken == null) {
@@ -85,20 +87,31 @@ public class LaoIDAuthController {
         HttpEntity<Map<String, String>> request = new HttpEntity<>(payload, headers);
 
         try {
+            log.info("📤 Đang gọi verify LaoID với code: {}", code);
             RestTemplate restTemplate = new RestTemplate();
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
 
-            if (response.getStatusCode().is2xxSuccessful()
-                    && Boolean.TRUE.equals(response.getBody().get("success"))) {
-                Map<String, Object> data = (Map<String, Object>) response.getBody().get("data");
-                return (String) data.get("accessToken");
+            log.info("📥 Trả về từ verify: {}", response);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                Map<String, Object> body = response.getBody();
+                log.info("📦 Body: {}", body);
+                if (Boolean.TRUE.equals(body.get("success"))) {
+                    Map<String, Object> data = (Map<String, Object>) body.get("data");
+                    return (String) data.get("accessToken");
+                } else {
+                    log.warn("❗Verify không thành công: {}", body);
+                }
+            } else {
+                log.warn("❗HTTP trả về không thành công: {}", response.getStatusCode());
             }
         } catch (Exception e) {
-            log.error("Lỗi khi gọi verify từ LaoID", e);
+            log.error("❌ Lỗi khi gọi verify từ LaoID", e);
         }
 
         return null;
     }
+
 
     private Map<String, Object> getUserInfoFromLaoId(String accessToken) {
         String url = "https://sso.laoid.net/api/v1/third-party/me";
