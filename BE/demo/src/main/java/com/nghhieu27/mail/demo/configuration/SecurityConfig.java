@@ -29,6 +29,10 @@ public class SecurityConfig {
             "/users", "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh", "/laoid"
     };
 
+    private static final String[] GET_PUBLIC_ENDPOINTS = {
+            "/ws-mail"
+    };
+
     @Autowired
     private CustomJwtDecoder customJwtDecoder;
 
@@ -36,8 +40,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity
                 .cors(Customizer.withDefaults())
-                .authorizeHttpRequests(request -> request.requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS)
-                .permitAll()
+                .authorizeHttpRequests(request -> request
+                        .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers(HttpMethod.GET, GET_PUBLIC_ENDPOINTS).permitAll()
                 .anyRequest()
                 .authenticated());
 
