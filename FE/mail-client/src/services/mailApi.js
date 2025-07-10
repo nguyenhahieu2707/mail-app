@@ -23,7 +23,18 @@ export const getEmailById = async (id) => {
     return response.data;
 };
 
-export const sendMail = async (mail) => {
-    const response = await axios.post(`${API_URL}/mail/sendmail`, mail, authHeader());
-    return response.data;
+export const sendMail = async (formData) => {
+  const response = await axios.post(`${API_URL}/mail/sendmail`, formData, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('accessToken')}`
+    }
+  });
+  return response.data;
 };
+
+
+
+// export const sendMail = async (mail) => {
+//     const response = await axios.post(`${API_URL}/mail/sendmail`, mail, authHeader());
+//     return response.data;
+// };

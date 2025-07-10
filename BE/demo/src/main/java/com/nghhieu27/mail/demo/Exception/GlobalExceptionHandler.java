@@ -34,14 +34,23 @@ public class GlobalExceptionHandler {
 
     private static final String MIN_ATTRIBUTE = "min";
 
-    @ExceptionHandler(value = Exception.class)
-    ResponseEntity<ApiResponse> handlingRuntimeException(RuntimeException exception) {
-        ApiResponse apiResponse = new ApiResponse();
+//    @ExceptionHandler(value = Exception.class)
+//    ResponseEntity<ApiResponse> handlingRuntimeException(RuntimeException exception) {
+//        ApiResponse apiResponse = new ApiResponse();
+//
+//        apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
+//        apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
+//        return ResponseEntity.badRequest().body(apiResponse);
+//    }
 
+    @ExceptionHandler(value = Exception.class)
+    public ResponseEntity<ApiResponse> handlingRuntimeException(Exception exception) {
+        ApiResponse apiResponse = new ApiResponse();
         apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
         apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
         return ResponseEntity.badRequest().body(apiResponse);
     }
+
 
     @ExceptionHandler(value = AppException.class)
     ResponseEntity<ApiResponse> handlingAppExceptionException(AppException exception) {

@@ -4,6 +4,7 @@ import { sendMail } from '../services/mailApi';
 
 function ComposeMail() {
     const [mail, setMail] = useState({ to: '', sub: '', body: '' });
+    const [attachment, setAttachment] = useState(null); 
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
@@ -11,13 +12,27 @@ function ComposeMail() {
         setMail({ ...mail, [e.target.name]: e.target.value });
     };
 
+    const handleFileChange = (e) => {
+        setAttachment(e.target.files[0]);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        const formData = new FormData();
+        formData.append('to', mail.to);
+        formData.append('sub', mail.sub);
+        formData.append('body', mail.body);
+        if (attachment) {
+            formData.append('attachment', attachment);
+        }
+
         try {
-            await sendMail(mail);
+            await sendMail(formData); 
             alert('Email sent successfully!');
             navigate('/sent');
         } catch (err) {
+            console.error(err);
             setError('Failed to send email');
         }
     };
@@ -60,6 +75,15 @@ function ComposeMail() {
                         value={mail.body}
                         onChange={handleChange}
                     ></textarea>
+                </div>
+                <div className="mb-3">
+                    <label htmlFor="attachment" className="form-label">Attachment:</label>
+                    <input
+                        type="file"
+                        className="form-control"
+                        id="attachment"
+                        onChange={handleFileChange}
+                    />
                 </div>
                 <button className="btn btn-primary" onClick={handleSubmit}>
                     Send

@@ -11,7 +11,7 @@ function EmailDetail() {
         const fetchEmail = async () => {
             try {
                 const data = await getEmailById(id);
-                // console.log(data)
+                console.log('Email received:', data.result);
                 setEmail(data.result);
             } catch (err) {
                 setError('Failed to fetch email');
@@ -19,6 +19,39 @@ function EmailDetail() {
         };
         fetchEmail();
     }, [id]);
+
+    const downloadAttachment = async () => {
+        try {
+            const formData = new URLSearchParams();
+            formData.append('path', email.attachmentPath);
+
+            const response = await fetch('http://localhost:8080/mail/attachment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString(),
+            });
+
+            if (!response.ok) {
+                throw new Error('Tải file thất bại');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = email.attachmentName || 'file';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Lỗi khi tải file:', err);
+        }
+    };
+
 
     if (error) return <div className="alert alert-danger">{error}</div>;
     if (!email) return <div>Loading...</div>;
@@ -33,6 +66,15 @@ function EmailDetail() {
                 <p><strong>Date:</strong> {email.date}</p>
                 <hr />
                 <p>{email.body}</p>
+
+                {email.attachmentName && (
+                    <div className="mt-3">
+                        <strong>Đính kèm:</strong>{' '}
+                        <button className="btn btn-link p-0" onClick={downloadAttachment}>
+                            📎 {email.attachmentName}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

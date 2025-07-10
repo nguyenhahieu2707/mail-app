@@ -22,7 +22,15 @@ public class Email {
 
     @Column(name = "to_email")
     String to;
+
     String sub;
     String body;
+
     Date date;
+
+    @Column(name = "attachment_name")
+    String attachmentName;
+
+    @Column(name = "attachment_path")
+    String attachmentPath;
 }

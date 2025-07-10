@@ -4,14 +4,21 @@ import com.nghhieu27.mail.demo.dto.request.ApiResponse;
 import com.nghhieu27.mail.demo.dto.request.EmailRequest;
 import com.nghhieu27.mail.demo.dto.response.EmailResponse;
 import com.nghhieu27.mail.demo.service.EmailService;
+import jakarta.mail.Quota;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/mail")
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -19,21 +26,59 @@ public class EmailController {
     @Autowired
     EmailService emailService;
 
-    @PostMapping("/sendmail")
-    ApiResponse<?> sendmail(@Valid @RequestBody EmailRequest emailRequest){
+//    @PostMapping("/sendmail")
+//    ApiResponse<?> sendmail(@Valid @RequestBody EmailRequest emailRequest){
+//        try {
+//            emailService.sendMail(emailRequest);
+//            return ApiResponse.builder()
+//                    .code(1000)
+//                    .message("Successfully!")
+//                    .build();
+//        } catch (Exception e) {
+//            return ApiResponse.builder()
+//                    .code(500)
+//                    .message("Error sending mail!: "+e.getMessage())
+//                    .build();
+//        }
+//    }
+
+    @PostMapping(value = "/sendmail", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<?> sendmail(
+            @RequestParam String to,
+            @RequestParam String sub,
+            @RequestParam(required = false) String body,
+            @RequestParam(required = false) MultipartFile attachment
+    ) {
         try {
-            emailService.sendMail(emailRequest);
+            EmailRequest emailRequest = EmailRequest.builder()
+                    .to(to)
+                    .sub(sub)
+                    .body(body)
+                    .build();
+            log.info("To: "+to);
+            log.info("Sub: "+sub);
+            log.info("body: "+body);
+            log.info((attachment != null ? attachment.getOriginalFilename() : "null"));
+
+            emailService.sendMail(emailRequest, attachment);
+
             return ApiResponse.builder()
                     .code(1000)
                     .message("Successfully!")
                     .build();
+
         } catch (Exception e) {
             return ApiResponse.builder()
                     .code(500)
-                    .message("Error sending mail!: "+e.getMessage())
+                    .message("Error sending mail!: " + e.getMessage())
                     .build();
         }
     }
+
+        @PostMapping("/attachment")
+        ResponseEntity<Resource> downloadAttachment (@RequestParam String path){
+            return emailService.downloadAttachment(path);
+        }
 
     @PostMapping("/createmail")
     ApiResponse<EmailResponse> createMail(@Valid @RequestBody EmailRequest emailRequest){

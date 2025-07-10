@@ -20,4 +20,6 @@ public class EmailResponse {
     String sub;
     String body;
     Date date;
+    String attachmentName;
+    String attachmentPath;
 }
