@@ -2,6 +2,7 @@ package com.nghhieu27.mail.demo.controller;
 
 import com.nghhieu27.mail.demo.dto.request.ApiResponse;
 import com.nghhieu27.mail.demo.dto.request.EmailRequest;
+import com.nghhieu27.mail.demo.dto.request.SearchRequest;
 import com.nghhieu27.mail.demo.dto.response.EmailResponse;
 import com.nghhieu27.mail.demo.service.EmailService;
 import jakarta.mail.Quota;
@@ -11,6 +12,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -110,6 +112,14 @@ public class EmailController {
         return ApiResponse.<EmailResponse>builder()
                 .code(1000)
                 .result(emailService.getMail(id))
+                .build();
+    }
+
+    @PostMapping("/search")
+    ApiResponse<Page<EmailResponse>> search(@RequestBody SearchRequest searchRequest){
+        return ApiResponse. <Page<EmailResponse>>builder()
+                .code(1000)
+                .result(emailService.search(searchRequest))
                 .build();
     }
 }

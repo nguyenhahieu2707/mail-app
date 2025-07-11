@@ -33,6 +33,15 @@ export const sendMail = async (formData) => {
 };
 
 
+export const searchEmails = async (searchQuery) => {
+  const response = await axios.post(
+    `${API_URL}/mail/search`,
+    { query: searchQuery, page: 0, size: 10 },
+    authHeader()
+  );
+  return response.data;
+};
+
 
 // export const sendMail = async (mail) => {
 //     const response = await axios.post(`${API_URL}/mail/sendmail`, mail, authHeader());

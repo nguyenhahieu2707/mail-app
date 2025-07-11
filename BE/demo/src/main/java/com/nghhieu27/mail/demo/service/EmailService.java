@@ -6,6 +6,7 @@ import com.nghhieu27.mail.demo.Exception.ErrorCode;
 import com.nghhieu27.mail.demo.configuration.MailProperties;
 import com.nghhieu27.mail.demo.dto.request.ApiResponse;
 import com.nghhieu27.mail.demo.dto.request.EmailRequest;
+import com.nghhieu27.mail.demo.dto.request.SearchRequest;
 import com.nghhieu27.mail.demo.dto.response.EmailResponse;
 import com.nghhieu27.mail.demo.entity.Email;
 import com.nghhieu27.mail.demo.mapper.EmailMapper;
@@ -19,6 +20,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -161,6 +166,11 @@ public class EmailService {
 //
 //        javaMailSender.send(simpleMailMessage);
 //    }
+    public Page<EmailResponse> search(SearchRequest searchRequest){
+        Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), Sort.by("date"));
+        Page<Email> emailPage = emailRepository.searchBySubOrBody(searchRequest.getQuery(), pageable);
+        return emailPage.map(emailMapper::toEmailResponse);
+    }
 
     public EmailResponse createMail(EmailRequest emailRequest){
         Email email = emailMapper.toEmail(emailRequest);
