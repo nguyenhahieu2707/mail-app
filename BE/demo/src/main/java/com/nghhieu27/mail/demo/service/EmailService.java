@@ -125,7 +125,7 @@ public class EmailService {
 
         System.out.println("File saved: " + filePath.toAbsolutePath());
 
-        return filePath.toString(); // ✅ Trả về path để lưu vào DB
+        return filePath.toString();
     }
 
     public ResponseEntity<Resource> downloadAttachment(String path){
@@ -168,7 +168,7 @@ public class EmailService {
 //    }
     public Page<EmailResponse> search(SearchRequest searchRequest){
         Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), Sort.by("date"));
-        Page<Email> emailPage = emailRepository.searchBySubOrBody(searchRequest.getQuery(), pageable);
+        Page<Email> emailPage = emailRepository.advancedSearch(searchRequest.getQuery(), searchRequest.getFromDate(), searchRequest.getToDate(), searchRequest.isHasAttachment(), pageable);
         return emailPage.map(emailMapper::toEmailResponse);
     }
 
@@ -183,7 +183,8 @@ public class EmailService {
     }
 
     public List<EmailResponse> getSentboxs(){
-        List<Email> emails = emailRepository.findAll();
+        String from = SecurityContextHolder.getContext().getAuthentication().getName();
+        List<Email> emails = emailRepository.findByFrom(from).orElse(Collections.emptyList());
         return emailMapper.toListEmailResponse(emails);
     }
 
@@ -197,8 +198,8 @@ public class EmailService {
             System.out.println("protocol: " + mailProperties.getProtocol());
             System.out.println("host: " + mailProperties.getHost());
             System.out.println("port: " + mailProperties.getPort());
-            System.out.println("username: " + mailProperties.getUsername());
-            System.out.println("password: " + mailProperties.getPassword());
+//            System.out.println("username: " + mailProperties.getUsername());
+//            System.out.println("password: " + mailProperties.getPassword());
 
             Properties props = new Properties();
             props.put("mail.store.protocol", mailProperties.getProtocol());
@@ -208,10 +209,13 @@ public class EmailService {
 
             Session session = Session.getDefaultInstance(props);
             store = session.getStore(mailProperties.getProtocol());
+
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
             store.connect(
                     mailProperties.getHost(),
-                    mailProperties.getUsername(),
-                    mailProperties.getPassword()
+                    username,
+                    mailProperties.getSharedPassword()
             );
 
             inbox = store.getFolder("INBOX");

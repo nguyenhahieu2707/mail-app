@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-//import { searchEmails } from '../mailApp.js';
+import SearchBarWithFilters from './SearchBarWithFilters.jsx';
+import EmailList from '../components/EmailList.jsx';
 
 const API_URL = 'http://localhost:8080';
 
@@ -11,54 +12,62 @@ const authHeader = () => ({
   }
 });
 
-export default function SearchResults() {
-  const [emails, setEmails] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+function SearchResults() {
   const location = useLocation();
-  const query = new URLSearchParams(location.search).get('query');
+  const queryParam = new URLSearchParams(location.search).get('query') || '';
 
-  useEffect(() => {
-    const fetchSearchResults = async () => {
-      try {
-        const response = await axios.post(
-          `${API_URL}/mail/search`,
-          { query, page: 0, size: 10 },
-          authHeader()
-        );
-        setEmails(response.data.result.content);
-        setLoading(false);
-      } catch (err) {
-        setError('Không thể tải kết quả tìm kiếm');
-        setLoading(false);
-      }
-    };
+  const [emails, setEmails] = useState([]);
+  const [searchParams, setSearchParams] = useState({
+    query: queryParam,
+    fromDate: null,
+    toDate: null,
+    hasAttachment: false
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-    if (query) {
-      fetchSearchResults();
-    } else {
-      setError('Không có từ khóa tìm kiếm');
+  const fetchEmails = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${API_URL}/mail/search`,
+        {
+          ...searchParams,
+          page: 0,
+          size: 20
+        },
+        authHeader()
+      );
+      setEmails(response.data.result.content);
+      setError(null);
+    } catch (err) {
+      setError("Không thể tải kết quả tìm kiếm");
+    } finally {
       setLoading(false);
     }
-  }, [query]);
+  };
 
-  if (loading) return <div>Đang tải...</div>;
-  if (error) return <div>{error}</div>;
+  useEffect(() => {
+    if (searchParams.query) {
+      fetchEmails();
+    }
+  }, [searchParams]);
 
   return (
-    <div>
-      <h2>Kết quả tìm kiếm cho "{query}"</h2>
-      {emails.length > 0 ? (
-        emails.map((email) => (
-          <div key={email.id} className="mb-3 p-3 border">
-            <p><strong>Từ:</strong> {email.from}</p>
-            <p><strong>Chủ đề:</strong> {email.sub}</p>
-            <p>{email.body.substring(0, 100)}...</p>
-          </div>
-        ))
-      ) : (
-        <p>Không tìm thấy kết quả nào</p>
-      )}
+    <div className="container">
+      <SearchBarWithFilters
+        onSearch={(params) => setSearchParams(params)}
+        initialQuery={queryParam}
+      />
+      <EmailList
+        title={`Kết quả tìm kiếm cho "${searchParams.query}"`}
+        emails={emails}
+        type="search"
+        isLoading={loading}
+        error={error}
+      />
     </div>
   );
 }
+
+export default SearchResults;

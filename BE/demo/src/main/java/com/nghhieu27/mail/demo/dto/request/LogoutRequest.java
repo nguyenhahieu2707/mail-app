@@ -6,7 +6,7 @@ import lombok.experimental.FieldDefaults;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+//@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class LogoutRequest {
     String token;

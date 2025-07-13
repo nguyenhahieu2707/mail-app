@@ -126,6 +126,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FiMail, FiLock, FiLoader, FiGrid } from 'react-icons/fi';
 import './Login.css';
+//import jwt_decode from "jwt-decode";
 
 const API_URL = 'http://localhost:8080/auth/token';
 
@@ -146,6 +147,7 @@ function Login() {
       const { result } = response.data;
       localStorage.setItem('accessToken', result.token);
       localStorage.setItem('refreshToken', result.refreshToken);
+      localStorage.setItem('email', email);
       navigate('/inbox');
     } catch (err) {
       setError('Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.');

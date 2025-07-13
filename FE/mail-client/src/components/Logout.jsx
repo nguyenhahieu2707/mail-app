@@ -5,34 +5,34 @@ const Logout = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    console.log(token);
+    const token = localStorage.getItem('accessToken'); // ✅ Dùng đúng key
 
     if (!token) {
-      // Nếu không có token thì logout luôn
+      console.warn('⚠️ No access token found. Redirecting...');
       navigate('/');
       return;
     }
 
     // Gọi API logout
-    fetch('http://localhost:8080/mailapp/auth/logout', {
+    fetch('http://localhost:8080/auth/logout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // ✅ Bắt buộc nếu backend xác thực
       },
-      body: JSON.stringify({ token }), // LogoutRequest: chỉ cần token
+      body: JSON.stringify({ token }),
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error('Logout failed');
+          console.error('❌ Logout request failed with status:', res.status);
         }
       })
       .catch((error) => {
-        console.error('Logout error:', error);
+        console.error('🚨 Logout error:', error);
       })
       .finally(() => {
-        // Xóa token và chuyển hướng
-        localStorage.removeItem('access_token');
+        // ✅ Xoá token sau khi gọi API xong
+        localStorage.removeItem('accessToken');
         navigate('/');
       });
   }, [navigate]);

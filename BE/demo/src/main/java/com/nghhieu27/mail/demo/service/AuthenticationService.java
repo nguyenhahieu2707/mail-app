@@ -15,6 +15,7 @@ import com.nghhieu27.mail.demo.dto.response.IntrospectResponse;
 import com.nghhieu27.mail.demo.entity.InvalidatedToken;
 import com.nghhieu27.mail.demo.entity.User;
 import com.nghhieu27.mail.demo.repository.InvalidatedTokenRepository;
+import com.nghhieu27.mail.demo.repository.UserImapRepository;
 import com.nghhieu27.mail.demo.repository.UserRepository;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
@@ -27,6 +28,8 @@ import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,6 +42,8 @@ import org.springframework.util.CollectionUtils;
 public class AuthenticationService {
     UserRepository userRepository;
     InvalidatedTokenRepository invalidatedTokenRepository;
+    ImapIdleService imapIdleService;
+    UserImapRepository userImapRepository;
 
     @NonFinal
     @Value("${jwt.signerKey}")
@@ -77,7 +82,11 @@ public class AuthenticationService {
 
         log.info(token.toString());
 
-        return AuthenticationResponse.builder().token(token).authenticated(true).build();
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        imapIdleService.startListenerForUser(userImapRepository.findByEmail(request.getEmail()).orElse(null));
+
+        return AuthenticationResponse.builder().token(token).email(email).authenticated(true).build();
     }
 
     public AuthenticationResponse authenticate_LaoID(LaoIDRequest request) {
@@ -122,21 +131,55 @@ public class AuthenticationService {
         }
     }
 
+//    public void logout(LogoutRequest request) throws ParseException, JOSEException {
+//        try {
+//            imapIdleService.stopListenerForUser(SecurityContextHolder.getContext().getAuthentication().getName());
+//
+//            var signToken = verifyToken(request.getToken(), true);
+//
+//            String jit = signToken.getJWTClaimsSet().getJWTID();
+//            Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
+//
+//            InvalidatedToken invalidatedToken =
+//                    InvalidatedToken.builder().id(jit).expiryTime(expiryTime).build();
+//
+//            invalidatedTokenRepository.save(invalidatedToken);
+//
+//        } catch (AppException exception) {
+//            log.info("Token already expired");
+//        }
+//    }
+
     public void logout(LogoutRequest request) throws ParseException, JOSEException {
         try {
-            var signToken = verifyToken(request.getToken(), true);
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            imapIdleService.stopListenerForUser(username);
+            log.info("Username {}", username);
 
-            String jit = signToken.getJWTClaimsSet().getJWTID();
+            var signToken = verifyToken(request.getToken(), true);
+            String jti = signToken.getJWTClaimsSet().getJWTID();
             Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
 
-            InvalidatedToken invalidatedToken =
-                    InvalidatedToken.builder().id(jit).expiryTime(expiryTime).build();
+            // Tạo entity
+            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
+                    .id(jti)
+                    .expiryTime(expiryTime)
+                    .build();
 
-            invalidatedTokenRepository.save(invalidatedToken);
-        } catch (AppException exception) {
-            log.info("Token already expired");
+            // Cố gắng lưu, nếu duplicate thì bỏ qua
+            try {
+                invalidatedTokenRepository.save(invalidatedToken);
+                log.info("✅ Token {} has been invalidated", jti);
+            } catch (DataIntegrityViolationException ex) {
+                log.info("ℹ️ Token {} already invalidated (duplicate caught)", jti);
+            }
+
+        } catch (AppException e) {
+            log.info("⚠️ Token already expired or invalid");
         }
     }
+
+
 
     public AuthenticationResponse refreshToken(RefreshRequest request) throws ParseException, JOSEException {
         var signedJWT = verifyToken(request.getToken(), true);
@@ -159,7 +202,7 @@ public class AuthenticationService {
         return AuthenticationResponse.builder().token(token).authenticated(true).build();
     }
 
-    private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
+    public SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
         JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
 
         SignedJWT signedJWT = SignedJWT.parse(token);

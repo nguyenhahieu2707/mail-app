@@ -3,6 +3,7 @@ package com.nghhieu27.mail.demo.configuration;
 import com.nghhieu27.mail.demo.dto.request.IntrospectRequest;
 import com.nghhieu27.mail.demo.service.AuthenticationService;
 import com.nimbusds.jose.JOSEException;
+import org.hibernate.validator.internal.util.stereotypes.Lazy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -22,6 +23,7 @@ public class CustomJwtDecoder implements JwtDecoder {
     private String signerKey;
 
     @Autowired
+    @Lazy
     private AuthenticationService authenticationService;
 
     private NimbusJwtDecoder nimbusJwtDecoder = null;

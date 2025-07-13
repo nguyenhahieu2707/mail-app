@@ -14,6 +14,5 @@ public class MailProperties {
     String host;
     int port;
     String protocol;
-    String username;
-    String password;
+    String sharedPassword;
 }

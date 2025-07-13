@@ -7,6 +7,8 @@ const MailNotification = () => {
 
   useMailSocket((mail) => {
     const mailWithTimestamp = { ...mail, timestamp: new Date() };
+    console.log("📥 Raw mail object:", mail, typeof mail);
+    console.log("📥 Cập nhật mail mới:", mailWithTimestamp);
     setMails((prev) => [mailWithTimestamp, ...prev]);
   });
 
@@ -52,22 +54,27 @@ const MailNotification = () => {
                     className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2"
                     style={{ width: '32px', height: '32px', fontWeight: 'bold', fontSize: '14px' }}
                   >
-                    {mail.from.charAt(0).toUpperCase()}
+                    {(mail.from || "?").charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-grow-1 overflow-hidden">
                     <div className="d-flex justify-content-between mb-1">
-                      <span className="fw-bold" style={{ fontSize: '14px' }}>{mail.from}</span>
-                      <span className="text-muted" style={{ fontSize: '12px' }}>{mail.timestamp.toLocaleTimeString()}</span>
+                      <span className="fw-bold" style={{ fontSize: '14px' }}>
+                        {mail.from || "Unknown"}
+                      </span>
+                      <span className="text-muted" style={{ fontSize: '12px' }}>
+                        {mail.timestamp?.toLocaleTimeString?.() || ""}
+                      </span>
                     </div>
                     <div 
                       className="text-truncate" 
                       style={{ fontSize: '13px' }}
                     >
-                      {mail.subject}
+                      {mail.subject || "(No subject)"}
                     </div>
                   </div>
                 </div>
               ))}
+
               {mails.length > 5 && (
                 <p className="text-center text-muted p-2 mb-0" style={{ fontSize: '12px' }}>
                   And {mails.length - 5} more emails...

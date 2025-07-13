@@ -30,8 +30,7 @@ mail:
     protocol: imap
     host: localhost
     port: 143
-    username: testmail
-    password: a
+    shared-password: 12345678
 
 jwt:
   signerKey: "qAZt3VopZNhsem0ytLp54iL96gU8UQX6fwNpT8Bqsx0tUU0w0EDysSFqHivimkuT"
