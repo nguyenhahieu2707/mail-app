@@ -14,7 +14,7 @@ const Logout = () => {
     }
 
     // Gọi API logout
-    fetch('http://localhost:8080/auth/logout', {
+    fetch('auth/logout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

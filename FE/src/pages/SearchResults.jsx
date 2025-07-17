@@ -4,7 +4,7 @@ import axios from 'axios';
 import SearchBarWithFilters from './SearchBarWithFilters.jsx';
 import EmailList from '../components/EmailList.jsx';
 
-const API_URL = 'http://localhost:8080';
+//const API_URL = 'http://localhost:8080';
 
 const authHeader = () => ({
   headers: {
@@ -30,7 +30,7 @@ function SearchResults() {
     setLoading(true);
     try {
       const response = await axios.post(
-        `${API_URL}/mail/search`,
+        `/mail/search`,
         {
           ...searchParams,
           page: 0,

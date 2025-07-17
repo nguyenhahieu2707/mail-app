@@ -17,7 +17,7 @@ spring:
             enable: false
 
   datasource:
-    url: "jdbc:mysql://localhost:3306/mail_db"
+    url: "jdbc:mysql://mysql-8.0.41:3306/mail_db"
     username: root
     password: root
   jpa:

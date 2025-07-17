@@ -25,7 +25,7 @@ function EmailDetail() {
             const formData = new URLSearchParams();
             formData.append('path', email.attachmentPath);
 
-            const response = await fetch('http://localhost:8080/mail/attachment', {
+            const response = await fetch('/mail/attachment', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',

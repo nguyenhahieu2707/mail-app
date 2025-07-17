@@ -1,0 +1,91 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { FiMail, FiLock, FiLoader, FiGrid } from 'react-icons/fi';
+import './Login.css';
+//import jwt_decode from "jwt-decode";
+
+//const API_URL = 'http://localhost:8080/auth/token';
+
+function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await axios.post('/auth/token', { email, password });
+      const { result } = response.data;
+      localStorage.setItem('accessToken', result.token);
+      localStorage.setItem('refreshToken', result.refreshToken);
+      localStorage.setItem('email', email);
+      navigate('/inbox');
+    } catch (err) {
+      setError('Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLaoIDLogin = () => {
+    const clientId = '660dfa27-5a95-4c88-8a55-abe1310bf579';
+    const redirectUri = 'http://localhost/laoid/auth/callback';
+    const loginUrl = `https://demo-sso.tinasoft.io/login?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&use_callback_uri=true`;
+    window.location.href = loginUrl;
+  };
+
+  return (
+    <div className="login-container">
+      <div className="login-card">
+        <h2 className="login-title">Chào mừng trở lại</h2>
+        <p className="login-subtitle">Đăng nhập để tiếp tục</p>
+
+        {error && <div className="login-error">{error}</div>}
+
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="input-wrapper">
+            <FiMail className="input-icon" />
+            <input
+              type="email"
+              className="form-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="Email"
+              disabled={isLoading}
+            />
+          </div>
+          <div className="input-wrapper">
+            <FiLock className="input-icon" />
+            <input
+              type="password"
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="Mật khẩu"
+              disabled={isLoading}
+            />
+          </div>
+          <button type="submit" className="login-button" disabled={isLoading}>
+            {isLoading ? <FiLoader className="spinner" /> : 'Đăng nhập'}
+          </button>
+        </form>
+
+        <div className="divider">hoặc</div>
+        <button className="laoid-button" onClick={handleLaoIDLogin}>
+          <FiGrid />
+          <span>Đăng nhập với LaoID</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default Login;

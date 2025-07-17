@@ -9,7 +9,7 @@ export default function useMailSocket(onNewMail) {
       return;
     }
 
-    const socketUrl = `ws://localhost:8080/ws-mail?token=${token}`;
+    const socketUrl = `${window.location.origin.replace(/^http/, 'ws')}/ws-mail?token=${token}`;
 
     const stompClient = new Client({
       brokerURL: socketUrl,
