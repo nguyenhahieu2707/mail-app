@@ -1,0 +1,6 @@
+user = root
+password = root
+hosts = mysql
+dbname = mail_db
+query = SELECT 1 FROM userimap WHERE SUBSTRING_INDEX(email, '@', -1) = '%s'
+

@@ -1,0 +1,7 @@
+driver = mysql
+connect = host=__MYSQL_HOST__ dbname=mail_db user=root password=root
+default_pass_scheme = SHA512-CRYPT
+
+password_query = SELECT email as user, password FROM userimap WHERE email = '%u'
+user_query = SELECT '/var/mail/vhosts/%d/%n' as home, '5000' as uid, '5000' as gid
+

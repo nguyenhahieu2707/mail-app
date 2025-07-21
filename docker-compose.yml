@@ -1,14 +1,30 @@
 version: '3.8'
 
 services:
+  mysql:
+    image: mysql:8.0.41-debian
+    container_name: mysql-8.0.41
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mail_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - mailnet
+
   backend:
     build:
       context: ./BE
     container_name: spring-backend
+    depends_on:
+      - mysql
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-8.0.41:3306/mail_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mail_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
     networks:
@@ -18,12 +34,32 @@ services:
     build:
       context: ./FE
     container_name: react-frontend
-    ports:
-      - "80:80"
     depends_on:
       - backend
+    ports:
+      - "80:80"
     networks:
       - mailnet
+
+  mailserver:
+    build:
+      context: ./mailserver
+    container_name: mailserver
+    depends_on:
+      - mysql
+    ports:
+      - "25:25"
+      - "143:143"
+      - "587:587"
+    networks:
+      - mailnet
+#    volumes:
+# #     - ./mailserver/conf/postfix:/etc/postfix
+#      - ./mailserver/conf/dovecot:/etc/dovecot
+#      - ./mailserver/conf:/etc
+
+volumes:
+  mysql_data:
 
 networks:
   mailnet:

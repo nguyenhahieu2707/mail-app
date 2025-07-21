@@ -1,0 +1,7 @@
+user = root
+password = root
+hosts = __MYSQL_HOST__
+dbname = mail_db
+#query = SELECT 1 FROM userimap WHERE email = '%s'
+#query = SELECT CONCAT('/var/mail/vhosts/', SUBSTRING_INDEX(email, '@', -1), '/', SUBSTRING_INDEX(email, '@', 1)) FROM userimap WHERE email='%s'
+query = SELECT CONCAT(SUBSTRING_INDEX(email, '@', -1), '/', SUBSTRING_INDEX(email, '@', 1)) FROM userimap WHERE email='%s'

@@ -5,21 +5,22 @@ server:
 
 spring:
   mail:
-    host: localhost
+    host: mailserver
     port: 25
-    username: testmail
-    password: a
+#    username: testmail
+#    password: a
     properties:
       mail:
         smtp:
-          auth: true
+          auth: false
           starttls:
             enable: false
 
   datasource:
-    url: "jdbc:mysql://mysql-8.0.41:3306/mail_db"
+    url: "jdbc:mysql://mysql:3306/mail_db"
     username: root
     password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
@@ -28,7 +29,7 @@ spring:
 mail:
   imap:
     protocol: imap
-    host: localhost
+    host: mailserver
     port: 143
     shared-password: 12345678
 

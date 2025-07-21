@@ -1,0 +1,6 @@
+user = root
+password = root
+hosts = mysql
+dbname = mail_db
+query = SELECT email FROM userimap WHERE email='%s'
+

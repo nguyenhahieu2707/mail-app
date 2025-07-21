@@ -1,0 +1,7 @@
+user = root
+password = root
+hosts = __MYSQL_HOST__
+dbname = mail_db
+#query = SELECT 1 FROM userimap WHERE SUBSTRING_INDEX(email, '@', -1) = '%s'
+query = SELECT DISTINCT SUBSTRING_INDEX(email, '@', -1) FROM userimap WHERE SUBSTRING_INDEX(email, '@', -1) = '%s'
+#query = SELECT 1 FROM userimap WHERE SUBSTRING_INDEX(email, '@', -1) = '%s' LIMIT 1
