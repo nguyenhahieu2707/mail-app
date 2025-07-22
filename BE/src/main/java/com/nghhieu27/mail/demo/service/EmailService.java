@@ -106,7 +106,7 @@ public class EmailService {
     }
 
     private String saveAttachment(MultipartFile file) throws IOException {
-        String uploadDir = "D:/attachments/";
+        String uploadDir = "/app/attachments/";
 
         // Đảm bảo thư mục tồn tại
         Path uploadPath = Paths.get(uploadDir);

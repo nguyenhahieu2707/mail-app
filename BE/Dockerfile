@@ -4,6 +4,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 RUN mvn clean package -DskipTests
+RUN mkdir -p /app/attachments && chmod -R 777 /app/attachments
 
 # --- Run Stage ---
 FROM eclipse-temurin:21-jdk

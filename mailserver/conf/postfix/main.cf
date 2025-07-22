@@ -41,7 +41,7 @@ alias_database = hash:/etc/aliases
 myorigin = $mydomain
 mydestination =
 relayhost = 
-mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+mynetworks = 127.0.0.0/8 172.22.0.0/16 172.25.0.0/16 [::ffff:127.0.0.0]/104 [::1]/128
 mailbox_size_limit = 0
 recipient_delimiter = +
 inet_interfaces = all
@@ -59,4 +59,7 @@ virtual_gid_maps = static:5000
 virtual_mailbox_base = /var/mail/vhosts
 
 disable_dns_lookups = yes
+ignore_mx_lookup_error = yes
 
+debug_peer_level = 3
+debug_peer_list = 172.25.0.3

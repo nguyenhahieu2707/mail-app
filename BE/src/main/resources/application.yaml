@@ -15,6 +15,8 @@ spring:
           auth: false
           starttls:
             enable: false
+          sendpartial:
+            enable: true
 
   datasource:
     url: "jdbc:mysql://mysql:3306/mail_db"
@@ -41,3 +43,4 @@ jwt:
 logging:
   level:
     org.springframework.security.web: DEBUG
+    org.springframework.mail: DEBUG
