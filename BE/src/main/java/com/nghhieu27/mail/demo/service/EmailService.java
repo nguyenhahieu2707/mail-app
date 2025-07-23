@@ -149,23 +149,6 @@ public class EmailService {
         }
     }
 
-//    public void sendMail(EmailRequest emailRequest){
-//        SimpleMailMessage simpleMailMessage = new SimpleMailMessage();
-//
-//        String fr = SecurityContextHolder.getContext().getAuthentication().getName();
-//
-//        simpleMailMessage.setFrom(fr);
-//        simpleMailMessage.setTo(emailRequest.getTo());
-//        simpleMailMessage.setSubject(emailRequest.getSub());
-//        simpleMailMessage.setText(emailRequest.getBody());
-//
-//        Email email = emailMapper.toEmail(emailRequest);
-//        email.setDate(Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant()));
-//
-//        emailRepository.save(email);
-//
-//        javaMailSender.send(simpleMailMessage);
-//    }
     public Page<EmailResponse> search(SearchRequest searchRequest){
         Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), Sort.by("date"));
         Page<Email> emailPage = emailRepository.advancedSearch(searchRequest.getQuery(), searchRequest.getFromDate(), searchRequest.getToDate(), searchRequest.isHasAttachment(), pageable);
