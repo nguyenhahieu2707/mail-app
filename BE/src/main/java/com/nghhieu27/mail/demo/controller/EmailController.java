@@ -28,22 +28,6 @@ public class EmailController {
     @Autowired
     EmailService emailService;
 
-//    @PostMapping("/sendmail")
-//    ApiResponse<?> sendmail(@Valid @RequestBody EmailRequest emailRequest){
-//        try {
-//            emailService.sendMail(emailRequest);
-//            return ApiResponse.builder()
-//                    .code(1000)
-//                    .message("Successfully!")
-//                    .build();
-//        } catch (Exception e) {
-//            return ApiResponse.builder()
-//                    .code(500)
-//                    .message("Error sending mail!: "+e.getMessage())
-//                    .build();
-//        }
-//    }
-
     @PostMapping(value = "/sendmail", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<?> sendmail(
             @RequestParam String to,

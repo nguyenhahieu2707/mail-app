@@ -17,7 +17,6 @@ spring:
             enable: false
           sendpartial:
             enable: true
-
   datasource:
     url: "jdbc:mysql://mysql:3306/mail_db"
     username: root
@@ -27,6 +26,8 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  profiles:
+    active: dev
 
 mail:
   imap:
@@ -40,7 +41,7 @@ jwt:
   valid-duration: 3600 # in seconds
   refreshable-duration: 36000 # in seconds
 
-logging:
-  level:
-    org.springframework.security.web: DEBUG
-    org.springframework.mail: DEBUG
+#logging:
+#  level:
+#    org.springframework.security.web: DEBUG
+#    org.springframework.mail: DEBUG

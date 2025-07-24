@@ -28,8 +28,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mail_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      SPRING_PROFILES_ACTIVE: prod
     networks:
       - mailnet
+    volumes:
+      - ./logs/backend:/app/logs
 
   frontend:
     build:
@@ -52,12 +55,10 @@ services:
       - "25:25"
       - "143:143"
       - "587:587"
+    volumes:
+      - ./logs/mailserver:/var/log/mailserver
     networks:
       - mailnet
-#    volumes:
-# #     - ./mailserver/conf/postfix:/etc/postfix
-#      - ./mailserver/conf/dovecot:/etc/dovecot
-#      - ./mailserver/conf:/etc
 
 volumes:
   mysql_data:

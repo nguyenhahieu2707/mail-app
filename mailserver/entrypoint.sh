@@ -1,52 +1,3 @@
-
-#!/bin/bash
-
-#echo "[ENTRYPOINT] Cleaning up old sockets..."
-## ... (các lệnh dọn dẹp giữ nguyên) ...
-#chown -R 5000:5000 /var/mail/vhosts
-#
-## --- PHẦN THAY ĐỔI QUAN TRỌNG ---
-#echo "[ENTRYPOINT] Resolving MySQL IP address..."
-#MYSQL_IP=""
-#while [ -z "$MYSQL_IP" ]; do
-#    MYSQL_IP=$(dig +short mysql)
-#    if [ -z "$MYSQL_IP" ]; then
-#        echo "[ENTRYPOINT] Could not resolve mysql, retrying in 2s..."
-#        sleep 2
-#    fi
-#done
-#echo "[ENTRYPOINT] ✅ MySQL resolved to IP: $MYSQL_IP"
-#
-#echo "[ENTRYPOINT] Creating config files from templates..."
-#
-## Tạo file cấu hình cho Dovecot
-#sed "s/__MYSQL_HOST__/$MYSQL_IP/g" /etc/dovecot/dovecot-sql.conf.ext.template > /etc/dovecot/dovecot-sql.conf.ext
-#
-## Tạo các file cấu hình cho Postfix
-#sed "s/__MYSQL_HOST__/$MYSQL_IP/g" /etc/postfix/mysql-virtual-domains.cf.template > /etc/postfix/mysql-virtual-domains.cf
-#sed "s/__MYSQL_HOST__/$MYSQL_IP/g" /etc/postfix/mysql-virtual-mailboxes.cf.template > /etc/postfix/mysql-virtual-mailboxes.cf
-## Thêm dòng sed cho file mysql-virtual-alias-maps.cf nếu bạn có
-## sed "s/__MYSQL_HOST__/$MYSQL_IP/g" /etc/postfix/mysql-virtual-alias-maps.cf.template > /etc/postfix/mysql-virtual-alias-maps.cf
-#
-#echo "[ENTRYPOINT] ✅ All config files created."
-## --- KẾT THÚC PHẦN THAY ĐỔI ---
-#
-#
-## ... (các lệnh khởi động Dovecot và Postfix giữ nguyên) ...
-#echo "[ENTRYPOINT] Starting Dovecot (background)..."
-#/usr/sbin/dovecot &
-#
-#echo "[ENTRYPOINT] Waiting for dovecot-lmtp socket to be ready..."
-#while [ ! -S /var/spool/postfix/private/dovecot-lmtp ]; do
-#    sleep 0.5
-#done
-#echo "[ENTRYPOINT] ✅ Dovecot LMTP socket is ready."
-#
-#echo "[ENTRYPOINT] Starting Postfix (foreground)..."
-#/usr/sbin/postfix start-fg
-
-#!/bin/bash
-
 echo "[ENTRYPOINT] Cleaning up old sockets..."
 rm -f /var/spool/postfix/private/dovecot-lmtp
 rm -f /var/run/dovecot/master.pid
@@ -57,6 +8,15 @@ chmod 755 /run/dovecot
 
 # Đảm bảo mailbox có quyền đúng
 chown -R 5000:5000 /var/mail/vhosts
+
+# Logging: đảm bảo thư mục log tồn tại
+mkdir -p /var/log/mailserver
+touch /var/log/mailserver/postfix.log /var/log/mailserver/dovecot.log
+chmod 644 /var/log/mailserver/*.log
+
+# Khởi động rsyslog
+echo "[ENTRYPOINT] Starting rsyslog..."
+rsyslogd
 
 # --- Thay thế __MYSQL_HOST__ bằng IP thật ---
 echo "[ENTRYPOINT] Resolving MySQL IP address..."

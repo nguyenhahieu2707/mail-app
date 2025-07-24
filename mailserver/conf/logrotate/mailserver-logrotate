@@ -1,0 +1,12 @@
+/var/log/mailserver/*.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    create 640 root adm
+    sharedscripts
+    postrotate
+        /usr/lib/rsyslog/rsyslog-rotate || true
+    endscript
+}

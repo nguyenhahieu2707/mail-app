@@ -1,0 +1,8 @@
+
+logging:
+  level:
+    root: INFO
+    com.nghhieu27.mail: INFO
+  file:
+    path: /app/logs
+    name: mail-app.log

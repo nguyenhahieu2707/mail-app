@@ -64,6 +64,8 @@ RUN apt-get update && apt-get install -y \
     mariadb-client \
     dnsutils \
     mailutils \
+    rsyslog \
+    logrotate \
  && rm -rf /var/lib/apt/lists/*
 
 # Tạo user và thư mục
@@ -74,8 +76,10 @@ RUN adduser --system --group --no-create-home dovecot \
 
 # Sao chép cấu hình postfix
 COPY ./conf/postfix /etc/postfix
-
 COPY ./conf/dovecot /etc/dovecot
+COPY ./conf/rsyslog/postfix.conf /etc/rsyslog.d/postfix.conf
+COPY ./conf/rsyslog/dovecot.conf /etc/rsyslog.d/dovecot.conf
+COPY ./conf/logrotate/mailserver-logrotate /etc/logrotate.d/mailserver
 
 RUN chown -R root:root /etc/postfix \
  && find /etc/postfix -type f -exec chmod 644 {} \; \

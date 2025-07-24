@@ -1,0 +1,11 @@
+spring:
+  profiles:
+    active: dev
+
+logging:
+  level:
+    root: DEBUG
+    com.nghhieu27.mail: DEBUG
+  file:
+    path: /app/logs
+    name: mail-app-dev.log

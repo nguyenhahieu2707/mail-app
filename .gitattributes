@@ -1,1 +1,11 @@
+# Bắt buộc file shell/script dùng LF
 *.sh text eol=lf
+
+# Cấu hình Dovecot/Postfix/logrotate dùng LF
+*.conf text eol=lf
+*.yml text eol=lf
+
+# Java source code thì tùy chọn
+*.java text
+*.xml text
+*.properties text
