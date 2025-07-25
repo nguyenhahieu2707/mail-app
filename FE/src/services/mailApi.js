@@ -83,6 +83,16 @@ export const getEmailById = async (id) => {
   }
 };
 
+export const getInboxEmail = async (uid) => {
+  try {
+    const response = await axios.get(`/mail/email/inbox/${uid}`, authHeader());
+    return response.data;
+  } catch (error) {
+    remoteLogger.error(`getInboxEmail failed (uid=${uid}): ${error.message}`);
+    throw error;
+  }
+};
+
 export const sendMail = async (formData) => {
   try {
     const response = await axios.post(`/mail/sendmail`, formData, {

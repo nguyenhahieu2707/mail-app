@@ -12,12 +12,14 @@ import com.nghhieu27.mail.demo.entity.Email;
 import com.nghhieu27.mail.demo.mapper.EmailMapper;
 import com.nghhieu27.mail.demo.repository.EmailRepository;
 import jakarta.mail.*;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
@@ -37,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -149,6 +152,78 @@ public class EmailService {
         }
     }
 
+    public ResponseEntity<?> streamInboxAttachment(String uidStr, String filenameFilter) {
+        Store store = null;
+        Folder inbox = null;
+
+        try {
+            Properties props = new Properties();
+            props.put("mail.store.protocol", mailProperties.getProtocol());
+            props.put("mail.imap.host", mailProperties.getHost());
+            props.put("mail.imap.port", String.valueOf(mailProperties.getPort()));
+            props.put("mail.imap.starttls.enable", "false");
+
+            Session session = Session.getDefaultInstance(props);
+            store = session.getStore(mailProperties.getProtocol());
+
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            store.connect(mailProperties.getHost(), username, mailProperties.getSharedPassword());
+
+            inbox = store.getFolder("INBOX");
+            inbox.open(Folder.READ_ONLY);
+            UIDFolder uf = (UIDFolder) inbox;
+            Message msg = uf.getMessageByUID(Long.parseLong(uidStr));
+
+            if (msg == null || !msg.isMimeType("multipart/*")) {
+                return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body("Không tìm thấy email hoặc không có multipart.");
+            }
+
+            Multipart multipart = (Multipart) msg.getContent();
+            for (int i = 0; i < multipart.getCount(); i++) {
+                BodyPart part = multipart.getBodyPart(i);
+                if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
+                    String fname = part.getFileName();
+                    if (filenameFilter != null && !filenameFilter.equals(fname)) {
+                        continue;
+                    }
+
+                    byte[] fileBytes = part.getInputStream().readAllBytes();
+                    InputStreamResource resource = new InputStreamResource(new java.io.ByteArrayInputStream(fileBytes));
+
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fname + "\"")
+                            .contentLength(fileBytes.length)
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .body(resource);
+                }
+            }
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Không tìm thấy tệp đính kèm hợp lệ.");
+
+        } catch (Exception e) {
+            log.error("Lỗi khi xử lý tệp đính kèm", e);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Lỗi hệ thống khi xử lý tệp đính kèm: " + e.getMessage());
+
+        } finally {
+            try {
+                if (inbox != null && inbox.isOpen()) inbox.close(false);
+                if (store != null && store.isConnected()) store.close();
+            } catch (MessagingException me) {
+                log.warn("Không thể đóng kết nối IMAP", me);
+            }
+        }
+    }
+
+
     public Page<EmailResponse> search(SearchRequest searchRequest){
         Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), Sort.by("date"));
         Page<Email> emailPage = emailRepository.advancedSearch(searchRequest.getQuery(), searchRequest.getFromDate(), searchRequest.getToDate(), searchRequest.isHasAttachment(), pageable);
@@ -164,6 +239,186 @@ public class EmailService {
     public EmailResponse getMail(String id){
         return emailMapper.toEmailResponse(emailRepository.findById(id).orElseThrow());
     }
+
+//    public EmailResponse getInboxMail(String uid){
+//        Store store = null;
+//        Folder inbox = null;
+//
+//        try {
+//
+//            System.out.println("protocol: " + mailProperties.getProtocol());
+//            System.out.println("host: " + mailProperties.getHost());
+//            System.out.println("port: " + mailProperties.getPort());
+//
+//            Properties props = new Properties();
+//            props.put("mail.store.protocol", mailProperties.getProtocol());
+//            props.put("mail.imap.host", mailProperties.getHost());
+//            props.put("mail.imap.port", String.valueOf(mailProperties.getPort()));
+//            props.put("mail.imap.starttls.enable", "false");
+//
+//            Session session = Session.getDefaultInstance(props);
+//            store = session.getStore(mailProperties.getProtocol());
+//
+//            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+//
+//            store.connect(
+//                    mailProperties.getHost(),
+//                    username,
+//                    mailProperties.getSharedPassword()
+//            );
+//
+//            inbox = store.getFolder("INBOX");
+//            inbox.open(Folder.READ_ONLY);
+//
+//            UIDFolder uf = (UIDFolder)inbox;
+//            Long longUid = Long.parseLong(uid);
+//            Message msg = uf.getMessageByUID(longUid);
+//
+//            EmailResponse emailResponse = new EmailResponse();
+//            emailResponse.setFrom(((InternetAddress) msg.getFrom()[0]).toUnicodeString());
+//            emailResponse.setSub(msg.getSubject());
+//            //emailResponse.setBody(msg.getContent().toString());
+//            emailResponse.setDate(msg.getSentDate());
+//
+//            // Xử lý body và attachment
+//            if (msg.isMimeType("text/plain")) {
+//                emailResponse.setBody(msg.getContent().toString());
+//            } else if (msg.isMimeType("multipart/*")) {
+//                Multipart mp = (Multipart) msg.getContent();
+//                for (int i = 0; i < mp.getCount(); i++) {
+//                    BodyPart part = mp.getBodyPart(i);
+//
+//                    // phần text
+//                    if (part.isMimeType("text/plain") && emailResponse.getBody() == null) {
+//                        emailResponse.setBody(part.getContent().toString());
+//                    }
+//
+//                    // phần attachment
+//                    String disp = part.getDisposition();
+//                    if (disp != null && disp.equalsIgnoreCase(Part.ATTACHMENT)) {
+//                        String fname = part.getFileName();
+//                        emailResponse.setAttachmentName(fname);
+//                        // không cần lưu đường dẫn, vì ta stream trực tiếp qua endpoint GET
+//                        break;
+//                    }
+//                }
+//            }
+//
+//            return emailResponse;
+//
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
+//        finally {
+//            try {
+//                if (inbox != null && inbox.isOpen()) {
+//                    inbox.close(false);
+//                }
+//                if (store != null && store.isConnected()) {
+//                    store.close();
+//                }
+//            } catch (Exception ex) {
+//                ex.printStackTrace();
+//            }
+//        }
+//    }
+
+    public EmailResponse getInboxMail(String uid) {
+        Store store = null;
+        Folder inbox = null;
+
+        try {
+            log.info("protocol: {}", mailProperties.getProtocol());
+            log.info("host: {}", mailProperties.getHost());
+            log.info("port: {}", mailProperties.getPort());
+
+            Properties props = new Properties();
+            props.put("mail.store.protocol", mailProperties.getProtocol());
+            props.put("mail.imap.host", mailProperties.getHost());
+            props.put("mail.imap.port", String.valueOf(mailProperties.getPort()));
+            props.put("mail.imap.starttls.enable", "false");
+
+            Session session = Session.getDefaultInstance(props);
+            store = session.getStore(mailProperties.getProtocol());
+
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            store.connect(mailProperties.getHost(), username, mailProperties.getSharedPassword());
+
+            inbox = store.getFolder("INBOX");
+            inbox.open(Folder.READ_ONLY);
+
+            UIDFolder uf = (UIDFolder) inbox;
+            Message msg = uf.getMessageByUID(Long.parseLong(uid));
+            if (msg == null) throw new RuntimeException("Không tìm thấy thư");
+
+            EmailResponse emailResponse = new EmailResponse();
+            emailResponse.setFrom(((InternetAddress) msg.getFrom()[0]).toUnicodeString());
+            emailResponse.setSub(msg.getSubject());
+            emailResponse.setDate(msg.getSentDate());
+
+            // Xử lý body (plain/html/đệ quy)
+            String bodyText = extractTextFromMessage(msg);
+            emailResponse.setBody(bodyText);
+
+            // Xử lý attachment
+            if (msg.isMimeType("multipart/*")) {
+                Multipart mp = (Multipart) msg.getContent();
+                for (int i = 0; i < mp.getCount(); i++) {
+                    BodyPart part = mp.getBodyPart(i);
+                    String disp = part.getDisposition();
+                    if (disp != null && disp.equalsIgnoreCase(Part.ATTACHMENT)) {
+                        emailResponse.setAttachmentName(part.getFileName());
+                        break;
+                    }
+                }
+            }
+
+            return emailResponse;
+
+        } catch (Exception e) {
+            log.error("Lỗi khi đọc mail inbox", e);
+            throw new RuntimeException("Không thể đọc mail inbox", e);
+        } finally {
+            try {
+                if (inbox != null && inbox.isOpen()) inbox.close(false);
+                if (store != null && store.isConnected()) store.close();
+            } catch (Exception e) {
+                log.warn("Lỗi khi đóng kết nối mail", e);
+            }
+        }
+    }
+
+    private String extractTextFromMessage(Message message) throws Exception {
+        if (message.isMimeType("text/plain")) {
+            return message.getContent().toString();
+        } else if (message.isMimeType("text/html")) {
+            return message.getContent().toString();
+        } else if (message.isMimeType("multipart/*")) {
+            Multipart mp = (Multipart) message.getContent();
+            return extractTextFromMultipart(mp);
+        }
+        return "";
+    }
+
+    private String extractTextFromMultipart(Multipart multipart) throws Exception {
+        for (int i = 0; i < multipart.getCount(); i++) {
+            BodyPart part = multipart.getBodyPart(i);
+
+            if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
+                continue; // skip attachment
+            }
+
+            if (part.isMimeType("text/html")) {
+                return part.getContent().toString();
+            } else if (part.isMimeType("text/plain")) {
+                return part.getContent().toString(); // fallback
+            } else if (part.isMimeType("multipart/*")) {
+                return extractTextFromMultipart((Multipart) part.getContent());
+            }
+        }
+        return "";
+    }
+
 
     public List<EmailResponse> getSentboxs(){
         String from = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -204,10 +459,15 @@ public class EmailService {
             inbox = store.getFolder("INBOX");
             inbox.open(Folder.READ_ONLY);
 
+            UIDFolder uf = (UIDFolder) inbox;
+
             Message[] messages = inbox.getMessages();
             for (int i = messages.length - 1; i >= Math.max(0, messages.length - 10); i--) {
                 Message message = messages[i];
                 Email email = new Email();
+
+                long uid = uf.getUID(message);
+                email.setId(String.valueOf(uid));
 
                 Address[] fromAddresses = message.getFrom();
                 if (fromAddresses != null && fromAddresses.length > 0) {

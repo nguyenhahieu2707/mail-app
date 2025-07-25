@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
@@ -61,10 +62,29 @@ public class EmailController {
         }
     }
 
-        @PostMapping("/attachment")
-        ResponseEntity<Resource> downloadAttachment (@RequestParam String path){
-            return emailService.downloadAttachment(path);
-        }
+    @PostMapping("/attachment")
+    ResponseEntity<Resource> downloadAttachment (@RequestParam String path){
+        return emailService.downloadAttachment(path);
+    }
+
+//    @GetMapping("/email/inbox/{uid}/attachment")
+//    public ResponseEntity<InputStreamResource> downloadInboxAttachment(
+//            @PathVariable String uid,
+//            @RequestParam(required = false) String filename  // có thể không dùng
+//    ) {
+//        return emailService.streamInboxAttachment(uid, filename);
+//    }
+
+    @GetMapping(
+            value = "/email/inbox/{uid}/attachment"
+    )
+    public ResponseEntity<?> downloadInboxAttachment(
+            @PathVariable String uid,
+            @RequestParam(required = false) String filename
+    ) {
+        return emailService.streamInboxAttachment(uid, filename);
+    }
+
 
     @PostMapping("/createmail")
     ApiResponse<EmailResponse> createMail(@Valid @RequestBody EmailRequest emailRequest){
@@ -96,6 +116,14 @@ public class EmailController {
         return ApiResponse.<EmailResponse>builder()
                 .code(1000)
                 .result(emailService.getMail(id))
+                .build();
+    }
+
+    @GetMapping("/email/inbox/{uid}")
+    ApiResponse<EmailResponse> getInboxMail(@PathVariable String uid){
+        return ApiResponse.<EmailResponse>builder()
+                .code(1000)
+                .result(emailService.getInboxMail(uid))
                 .build();
     }
 

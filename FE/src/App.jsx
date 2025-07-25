@@ -3,7 +3,8 @@ import { MainLayout, AuthLayout } from './components/Layout.jsx';
 import Inbox from './pages/Inbox.jsx';
 import SentBox from './pages/SentBox.jsx';
 import Login from './components/Login.jsx';
-import EmailDetail from './components/EmailDetail.jsx';
+import InboxEmailDetail from './components/InboxEmailDetail.jsx';
+import SentEmailDetail from './components/SentMailDetail.jsx';
 import ComposeMail from './components/ComposeMail.jsx';
 import LaoIDCallback from './components/LaoIDCallback.jsx';
 import Logout from './components/Logout.jsx';
@@ -35,7 +36,9 @@ function App() {
       <Route element={<MainLayout />}>
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/sent" element={<SentBox />} />
-        <Route path="/email/:id" element={<EmailDetail />} />
+        {/* <Route path="/email/:type/:id" element={<EmailDetail />} /> */}
+        <Route path="/email/sent/:id" element={<SentEmailDetail />} />
+        <Route path="/email/inbox/:id" element={<InboxEmailDetail />} />
         <Route path="/compose" element={<ComposeMail />} />
         <Route path="/search" element={<SearchResults />} /> {/* Thêm route */}
       </Route>
