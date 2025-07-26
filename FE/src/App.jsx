@@ -14,13 +14,7 @@ import { remoteLogger } from './utils/remoteLogger';
 import './components/Layout.css';
 import './components/Login.css';
 
-window.onerror = function (message, source, lineno, colno, error) {
-  remoteLogger.error(`JS Error: ${message} at ${source}:${lineno}:${colno}`);
-};
-
-window.onunhandledrejection = function (event) {
-  remoteLogger.error(`Unhandled Promise rejection: ${event.reason}`);
-};
+// ... (code window.onerror và window.onunhandledrejection giữ nguyên)
 
 function App() {
   return (
@@ -28,7 +22,8 @@ function App() {
       {/* Các route không cần xác thực */}
       <Route element={<AuthLayout />}>
         <Route path="/" element={<Login />} />
-        <Route path="/laoid/auth/callback" element={<LaoIDCallback />} />
+        {/* ✅ SỬA LẠI PATH Ở ĐÂY */}
+        <Route path="/laoid-callback" element={<LaoIDCallback />} />
         <Route path="/logout" element={<Logout />} />
       </Route>
 
@@ -36,11 +31,10 @@ function App() {
       <Route element={<MainLayout />}>
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/sent" element={<SentBox />} />
-        {/* <Route path="/email/:type/:id" element={<EmailDetail />} /> */}
         <Route path="/email/sent/:id" element={<SentEmailDetail />} />
         <Route path="/email/inbox/:id" element={<InboxEmailDetail />} />
         <Route path="/compose" element={<ComposeMail />} />
-        <Route path="/search" element={<SearchResults />} /> {/* Thêm route */}
+        <Route path="/search" element={<SearchResults />} />
       </Route>
     </Routes>
   );

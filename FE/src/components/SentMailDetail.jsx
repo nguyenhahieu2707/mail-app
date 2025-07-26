@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getEmailById } from '../services/mailApi';
+import './EmailDetail.css'; // Import file CSS mới
 
 function SentEmailDetail() {
   const { id } = useParams();
@@ -11,35 +12,27 @@ function SentEmailDetail() {
     const fetchEmail = async () => {
       try {
         const data = await getEmailById(id);
-        console.log('Email received:', data.result);
         setEmail(data.result);
       } catch (err) {
-        setError('Không thể tải thư đã gửi');
+        setError('Không thể tải chi tiết thư đã gửi.');
       }
     };
     fetchEmail();
   }, [id]);
-
+  
+  // Hàm downloadAttachment không thay đổi, giữ nguyên như cũ
   const downloadAttachment = async () => {
     try {
       const formData = new URLSearchParams();
-      formData.append('path', email.attachmentPath); // giống như file từng chạy
-
+      formData.append('path', email.attachmentPath);
       const response = await fetch('/mail/attachment', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData.toString(),
       });
-
-      if (!response.ok) {
-        throw new Error('Tải file thất bại');
-      }
-
+      if (!response.ok) throw new Error('Tải file thất bại');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-
       const a = document.createElement('a');
       a.href = url;
       a.download = email.attachmentName || 'file';
@@ -52,29 +45,35 @@ function SentEmailDetail() {
     }
   };
 
-  if (error) return <div className="alert alert-danger">{error}</div>;
-  if (!email) return <div>Loading...</div>;
+  if (error) return <div className="error-text">{error}</div>;
+  if (!email) return <div className="loading-text">Đang tải...</div>;
 
   return (
-    <div className="container">
-      <h2>Chi tiết Thư Đã Gửi</h2>
-      <div className="card p-4">
-        <h5>From: {email.from}</h5>
-        <h5>To: {email.to}</h5>
-        <h5>Subject: {email.sub}</h5>
-        <p><strong>Date:</strong> {email.date}</p>
-        <hr />
-        <p>{email.body}</p>
-
-        {email.attachmentName && (
-          <div className="mt-3">
-            <strong>Đính kèm:</strong>{' '}
-            <button className="btn btn-link p-0" onClick={downloadAttachment}>
-              📎 {email.attachmentName}
-            </button>
-          </div>
-        )}
+    <div className="email-detail-container">
+      <div className="email-header">
+        <h2 className="email-subject">{email.sub}</h2>
+        <div className="email-info">
+          <span className="label">👤 Tới:</span>
+          <span>{email.to}</span>
+        </div>
+        <div className="email-info">
+          <span className="label">📅 Ngày gửi:</span>
+          <span>{new Date(email.date).toLocaleString()}</span>
+        </div>
       </div>
+
+      <div className="email-body">
+        <p>{email.body}</p>
+      </div>
+
+      {email.attachmentName && (
+        <div className="email-attachment-section">
+          <button className="attachment-button" onClick={downloadAttachment}>
+            📎
+            <span>{email.attachmentName}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

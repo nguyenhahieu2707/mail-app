@@ -101,6 +101,10 @@ public class AuthenticationService {
         var token = generateToken(user);
         log.info(token.toString());
 
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        imapIdleService.startListenerForUser(userImapRepository.findByEmail(request.getEmail()).orElse(null));
+
         return AuthenticationResponse.builder().token(token).authenticated(true).build();
     }
 

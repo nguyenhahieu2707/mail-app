@@ -2,14 +2,18 @@ package com.nghhieu27.mail.demo.controller;
 
 import com.nghhieu27.mail.demo.Exception.AppException;
 import com.nghhieu27.mail.demo.Exception.ErrorCode;
+import com.nghhieu27.mail.demo.configuration.MailProperties;
 import com.nghhieu27.mail.demo.dto.request.ApiResponse;
 import com.nghhieu27.mail.demo.dto.request.LaoIDRequest;
 import com.nghhieu27.mail.demo.dto.response.AuthenticationResponse;
 import com.nghhieu27.mail.demo.entity.User;
+import com.nghhieu27.mail.demo.entity.UserIMAP;
+import com.nghhieu27.mail.demo.repository.UserImapRepository;
 import com.nghhieu27.mail.demo.repository.UserRepository;
 import com.nghhieu27.mail.demo.service.AuthenticationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.Crypt;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -24,6 +28,8 @@ public class LaoIDAuthController {
 
     private final AuthenticationService authenticationService;
     private final UserRepository userRepository;
+    private final MailProperties mailProperties;
+    private final UserImapRepository userImapRepository;
 
     private static final String CLIENT_ID = "660dfa27-5a95-4c88-8a55-abe1310bf579";
     private static final String CLIENT_SECRET = "df1699140bcb456eaa6d85d54c5fbd79";
@@ -55,7 +61,11 @@ public class LaoIDAuthController {
 
         // Step 3: Lưu user vào DB nếu chưa có
         String email = extractEmail(userInfo);
-        log.info("email: "+email);
+        // ✅ Lấy thêm firstName và lastName
+        String firstName = extractFirstName(userInfo);
+        String lastName = extractLastName(userInfo);
+
+        log.info("Email: {}, FirstName: {}, LastName: {}", email, firstName, lastName);
         if (email == null) {
             return ApiResponse.<AuthenticationResponse>builder()
                     .code(444).build();
@@ -63,24 +73,29 @@ public class LaoIDAuthController {
 
         User user = userRepository.findByEmail(email)
                 .orElseGet(() -> {
+                    log.info("Tài khoản chưa tồn tại, đang tạo mới cho email: {}", email);
                     User newUser = new User();
                     newUser.setEmail(email);
+                    newUser.setFirstName(firstName);
+                    newUser.setLastName(lastName);
+
+                    String dovecotPassword = Crypt.crypt(mailProperties.getSharedPassword(), "$6$" + UUID.randomUUID().toString().substring(0, 8));
+
+                    UserIMAP userIMAP = new UserIMAP();
+                    userIMAP.setEmail(email);
+                    userIMAP.setPassword(dovecotPassword);
+
+                    userImapRepository.save(userIMAP);
+
                     return userRepository.save(newUser);
                 });
 
         LaoIDRequest laoIDRequest = new LaoIDRequest(user.getEmail());
 
         // Step 4: Sinh JWT từ hệ thống bạn
-        //String token = authenticationService.authenticate_LaoID(laoIDRequest).getToken();
-
         return ApiResponse.<AuthenticationResponse>builder()
                 .result(authenticationService.authenticate_LaoID(laoIDRequest))
                 .build();
-
-//        return ResponseEntity.ok(AuthenticationResponse.builder()
-//                .token(token)
-//                .authenticated(true)
-//                .build());
     }
 
     private String getAccessTokenFromLaoId(String code) {
@@ -155,6 +170,26 @@ public class LaoIDAuthController {
             return (String) emails.get(0).get("email");
         } catch (Exception e) {
             log.warn("Không thể extract email từ userInfo");
+            return null;
+        }
+    }
+
+    // ✅ Thêm hàm lấy firstName
+    private String extractFirstName(Map<String, Object> userInfo) {
+        try {
+            return (String) userInfo.get("firstName");
+        } catch (Exception e) {
+            log.warn("Không thể extract firstName từ userInfo");
+            return null;
+        }
+    }
+
+    // ✅ Thêm hàm lấy lastName
+    private String extractLastName(Map<String, Object> userInfo) {
+        try {
+            return (String) userInfo.get("lastName");
+        } catch (Exception e) {
+            log.warn("Không thể extract lastName từ userInfo");
             return null;
         }
     }
