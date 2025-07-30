@@ -12,10 +12,6 @@ import org.springframework.stereotype.Service;
 public class MailNotificationService {
     private final SimpMessagingTemplate messagingTemplate;
 
-//    public void notifyNewMail(MailNotificationRequest mail) {
-//        messagingTemplate.convertAndSend("/topic/mail", mail);
-//    }
-
     public void notifyUserNewMail(String email, MailNotificationRequest mail) {
         log.info("📤 Sending mail to user [{}]", email);  // log email
         messagingTemplate.convertAndSendToUser(email, "/queue/mail", mail);

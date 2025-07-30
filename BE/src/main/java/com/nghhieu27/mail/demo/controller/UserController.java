@@ -19,19 +19,24 @@ import java.util.List;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserController {
+
     UserService userService;
 
     @PostMapping
     ApiResponse<UserResponse> createUser(@RequestBody @Valid UserCreationRequest request) {
+        log.info("Received request to create user: {}", request.getEmail());
+        var result = userService.createUser(request);
+        log.info("User created successfully: {}", result.getEmail());
         return ApiResponse.<UserResponse>builder()
                 .code(1000)
                 .message("Create Successfully!")
-                .result(userService.createUser(request))
+                .result(result)
                 .build();
     }
 
     @GetMapping
     ApiResponse<List<UserResponse>> getUsers() {
+        log.info("Fetching all users");
         return ApiResponse.<List<UserResponse>>builder()
                 .result(userService.getUsers())
                 .build();
@@ -39,32 +44,17 @@ public class UserController {
 
     @GetMapping("/{userId}")
     ApiResponse<UserResponse> getUser(@PathVariable String userId) {
+        log.info("Fetching user with ID: {}", userId);
         return ApiResponse.<UserResponse>builder()
                 .result(userService.getUser(userId))
                 .build();
     }
 
-//    @PutMapping("/{userId}")
-//    UserResponse updateUser(@PathVariable String userId, @RequestBody UserUpdateRequest request) {
-//        return userService.updateUser(userId, request);
-//    }
-//
     @DeleteMapping("/{userId}")
     String deleteUser(@PathVariable String userId) {
+        log.info("Deleting user with ID: {}", userId);
         userService.deleteUser(userId);
         return "User has been deleted!";
     }
-
-/*    @GetMapping("/myInfo")
-    ApiResponse<UserResponse> getMyInfo() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        log.info("LOG: {}", authentication.getName());
-        Jwt jwt = (Jwt) authentication.getPrincipal();
-        String userId = jwt.getClaimAsString("userId");
-        log.info("UserId: {}", userId);
-        return ApiResponse.<UserResponse>builder()
-                .result(userService.getUser(userId))
-                .build();
-    }*/
 }
+

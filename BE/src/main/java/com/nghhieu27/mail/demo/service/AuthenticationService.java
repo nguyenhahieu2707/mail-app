@@ -40,6 +40,7 @@ import org.springframework.util.CollectionUtils;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationService {
+
     UserRepository userRepository;
     InvalidatedTokenRepository invalidatedTokenRepository;
     ImapIdleService imapIdleService;
@@ -60,146 +61,123 @@ public class AuthenticationService {
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
         var token = request.getToken();
         boolean isValid = true;
-
         try {
             verifyToken(token, false);
         } catch (AppException e) {
             isValid = false;
         }
-
+        log.info("Introspected token [{}]: valid = {}", token.substring(0, 10) + "...", isValid);
         return IntrospectResponse.builder().valid(isValid).build();
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        log.info("Authenticating user: {}", request.getEmail());
+
         var user = userRepository
                 .findByEmail(request.getEmail())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+                .orElseThrow(() -> {
+                    log.warn("User not found: {}", request.getEmail());
+                    return new AppException(ErrorCode.USER_NOT_EXISTED);
+                });
+
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
-        if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
+
+        if (!authenticated) {
+            log.warn("Invalid credentials for user: {}", request.getEmail());
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
 
         var token = generateToken(user);
+        log.info("Token generated for user: {}", user.getEmail());
 
-        log.info(token.toString());
+        imapIdleService.startListenerForUser(userImapRepository.findByEmail(user.getEmail()).orElse(null));
+        log.info("Started IMAP listener for user: {}", user.getEmail());
 
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        imapIdleService.startListenerForUser(userImapRepository.findByEmail(request.getEmail()).orElse(null));
-
-        return AuthenticationResponse.builder().token(token).email(email).authenticated(true).build();
+        return AuthenticationResponse.builder()
+                .token(token)
+                .email(user.getEmail())
+                .authenticated(true)
+                .build();
     }
 
     public AuthenticationResponse authenticate_LaoID(LaoIDRequest request) {
+        log.info("Authenticating LaoID user: {}", request.getEmail());
+
         var user = userRepository
                 .findByEmail(request.getEmail())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-//        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
-//        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
-//        if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
+                .orElseThrow(() -> {
+                    log.warn("User not found (LaoID): {}", request.getEmail());
+                    return new AppException(ErrorCode.USER_NOT_EXISTED);
+                });
 
-        log.info("token  ");
         var token = generateToken(user);
-        log.info(token.toString());
+        log.info("Token generated for LaoID user: {}", user.getEmail());
 
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        imapIdleService.startListenerForUser(userImapRepository.findByEmail(request.getEmail()).orElse(null));
+        imapIdleService.startListenerForUser(userImapRepository.findByEmail(user.getEmail()).orElse(null));
+        log.info("Started IMAP listener for LaoID user: {}", user.getEmail());
 
         return AuthenticationResponse.builder().token(token).authenticated(true).build();
     }
 
     private String generateToken(User user) {
-        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
-
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
-                .subject(user.getEmail())
-                .issuer("hieu.com")
-                .claim("userId", user.getId())
-                .issueTime(new Date())
-                .expirationTime(new Date(
-                        Instant.now().plus(VALID_DURATION, ChronoUnit.SECONDS).toEpochMilli()))
-                .jwtID(UUID.randomUUID().toString())
-//                .claim("scope", buildScope(user))
-                .build();
-
-        Payload payload = new Payload(jwtClaimsSet.toJSONObject());
-
-        JWSObject jwsObject = new JWSObject(header, payload);
-
         try {
+            JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                    .subject(user.getEmail())
+                    .issuer("hieu.com")
+                    .claim("userId", user.getId())
+                    .issueTime(new Date())
+                    .expirationTime(Date.from(Instant.now().plus(VALID_DURATION, ChronoUnit.SECONDS)))
+                    .jwtID(UUID.randomUUID().toString())
+                    .build();
+
+            JWSObject jwsObject = new JWSObject(new JWSHeader(JWSAlgorithm.HS512), new Payload(claims.toJSONObject()));
             jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes()));
             return jwsObject.serialize();
         } catch (JOSEException e) {
-            log.error("Cannot create token!", e);
-            throw new RuntimeException(e);
+            log.error("Failed to generate JWT token", e);
+            throw new RuntimeException("JWT generation failed", e);
         }
     }
-
-//    public void logout(LogoutRequest request) throws ParseException, JOSEException {
-//        try {
-//            imapIdleService.stopListenerForUser(SecurityContextHolder.getContext().getAuthentication().getName());
-//
-//            var signToken = verifyToken(request.getToken(), true);
-//
-//            String jit = signToken.getJWTClaimsSet().getJWTID();
-//            Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
-//
-//            InvalidatedToken invalidatedToken =
-//                    InvalidatedToken.builder().id(jit).expiryTime(expiryTime).build();
-//
-//            invalidatedTokenRepository.save(invalidatedToken);
-//
-//        } catch (AppException exception) {
-//            log.info("Token already expired");
-//        }
-//    }
 
     public void logout(LogoutRequest request) throws ParseException, JOSEException {
         try {
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            log.info("Logging out user: {}", username);
+
             imapIdleService.stopListenerForUser(username);
-            log.info("Username {}", username);
+            log.info("Stopped IMAP listener for user: {}", username);
 
-            var signToken = verifyToken(request.getToken(), true);
-            String jti = signToken.getJWTClaimsSet().getJWTID();
-            Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
+            var signedToken = verifyToken(request.getToken(), true);
+            String jti = signedToken.getJWTClaimsSet().getJWTID();
+            Date expiryTime = signedToken.getJWTClaimsSet().getExpirationTime();
 
-            // Tạo entity
-            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
-                    .id(jti)
-                    .expiryTime(expiryTime)
-                    .build();
-
-            // Cố gắng lưu, nếu duplicate thì bỏ qua
             try {
-                invalidatedTokenRepository.save(invalidatedToken);
-                log.info("✅ Token {} has been invalidated", jti);
+                invalidatedTokenRepository.save(
+                        InvalidatedToken.builder().id(jti).expiryTime(expiryTime).build()
+                );
+                log.info("Token {} invalidated successfully", jti);
             } catch (DataIntegrityViolationException ex) {
-                log.info("ℹ️ Token {} already invalidated (duplicate caught)", jti);
+                log.info("Token {} already invalidated", jti);
             }
 
         } catch (AppException e) {
-            log.info("⚠️ Token already expired or invalid");
+            log.warn("Logout failed: token already expired or invalid");
         }
     }
-
-
 
     public AuthenticationResponse refreshToken(RefreshRequest request) throws ParseException, JOSEException {
         var signedJWT = verifyToken(request.getToken(), true);
 
-        var jit = signedJWT.getJWTClaimsSet().getJWTID();
+        var jti = signedJWT.getJWTClaimsSet().getJWTID();
         var expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-
-        InvalidatedToken invalidatedToken =
-                InvalidatedToken.builder().id(jit).expiryTime(expiryTime).build();
-
-        invalidatedTokenRepository.save(invalidatedToken);
-
         var email = signedJWT.getJWTClaimsSet().getSubject();
 
-        var user =
-                userRepository.findByEmail(email).orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+        invalidatedTokenRepository.save(InvalidatedToken.builder().id(jti).expiryTime(expiryTime).build());
+        log.info("Refreshing token for user: {}", email);
+
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
         var token = generateToken(user);
 
@@ -207,41 +185,24 @@ public class AuthenticationService {
     }
 
     public SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
-        JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
-
         SignedJWT signedJWT = SignedJWT.parse(token);
 
-        Date expiryTime = (isRefresh)
-                ? new Date(signedJWT
-                .getJWTClaimsSet()
-                .getIssueTime()
-                .toInstant()
-                .plus(REFRESH_DURATION, ChronoUnit.SECONDS)
-                .toEpochMilli())
+        Date expiryTime = isRefresh
+                ? Date.from(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(REFRESH_DURATION, ChronoUnit.SECONDS))
                 : signedJWT.getJWTClaimsSet().getExpirationTime();
 
-        var verified = signedJWT.verify(verifier);
-
-        if (!(verified && expiryTime.after(new Date()))) {
-            throw new AppException((ErrorCode.UNAUTHENTICATED));
+        if (!signedJWT.verify(new MACVerifier(SIGNER_KEY.getBytes())) || expiryTime.before(new Date())) {
+            log.warn("Invalid or expired token");
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        if (invalidatedTokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID())) {
+        String jti = signedJWT.getJWTClaimsSet().getJWTID();
+        if (invalidatedTokenRepository.existsById(jti)) {
+            log.warn("Token {} has been invalidated", jti);
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
         return signedJWT;
     }
-
-//    private String buildScope(User user) {
-//        StringJoiner stringJoiner = new StringJoiner(" ");
-//        if (!CollectionUtils.isEmpty(user.getRoles()))
-//            user.getRoles().forEach(role -> {
-//                stringJoiner.add("ROLE_" + role.getName());
-//                if (!CollectionUtils.isEmpty(role.getPermissions()))
-//                    role.getPermissions().forEach(permission -> stringJoiner.add(permission.getName()));
-//            });
-//
-//        return stringJoiner.toString();
-//    }
 }
+

@@ -13,6 +13,7 @@ import com.nghhieu27.mail.demo.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.Crypt;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,67 +23,65 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserService {
+
     UserRepository userRepository;
     UserImapRepository userImapRepository;
     UserMapper userMapper;
     MailProperties mailProperties;
-//    PasswordEncoder passwordEncoder;
-
 
     public UserResponse createUser(UserCreationRequest request) {
+        log.info("Creating user: {}", request.getEmail());
+
         if (userRepository.existsByEmail(request.getEmail())) {
+            log.warn("User already exists: {}", request.getEmail());
             throw new AppException(ErrorCode.USER_EXISTED);
         }
 
         User user = userMapper.toUser(request);
 
-        String dovecotPassword = Crypt.crypt(mailProperties.getSharedPassword(), "$6$" + UUID.randomUUID().toString().substring(0, 8));
+        String dovecotPassword = Crypt.crypt(
+                mailProperties.getSharedPassword(), "$6$" + UUID.randomUUID().toString().substring(0, 8));
 
         UserIMAP userIMAP = new UserIMAP();
         userIMAP.setEmail(user.getEmail());
         userIMAP.setPassword(dovecotPassword);
-
         userImapRepository.save(userIMAP);
+        log.info("Saved IMAP account for user: {}", user.getEmail());
 
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-//        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        var savedUser = userRepository.save(user);
+        log.info("User saved successfully: {}", savedUser.getEmail());
 
-        return userMapper.toUserResponse(userRepository.save(user));
+        return userMapper.toUserResponse(savedUser);
     }
 
-//    @PreAuthorize("hasRole('ADMIN')")
-    //   @PreAuthorize("hasAuthority('UPDATE_DATA')")
     public List<UserResponse> getUsers() {
+        log.info("Fetching all users");
         return userMapper.toListUserResponse(userRepository.findAll());
     }
 
-//    @PostAuthorize("returnObject.username == authentication.name")
     public UserResponse getUser(String userId) {
+        log.info("Fetching user with ID: {}", userId);
         return userMapper.toUserResponse(
-                userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found!")));
+                userRepository.findById(userId).orElseThrow(() -> {
+                    log.warn("User not found: {}", userId);
+                    return new RuntimeException("User not found!");
+                })
+        );
     }
 
-//    public UserResponse updateUser(String userId, UserUpdateRequest request) {
-//        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found!"));
-//
-//        userMapper.updateUser(user, request);
-//        user.setPassword(passwordEncoder.encode(request.getPassword()));
-//
-//        var roles = roleRepository.findAllById(request.getRoles());
-//        user.setRoles(new HashSet<>(roles));
-//
-//        return userMapper.toUserResponse(userRepository.save(user));
-//    }
-
     public void deleteUser(String userId) {
+        log.info("Deleting user with ID: {}", userId);
         userRepository.deleteById(userId);
     }
 }
+
 
 

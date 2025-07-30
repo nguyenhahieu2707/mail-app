@@ -26,6 +26,7 @@ import java.util.List;
 @RequestMapping("/mail")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class EmailController {
+
     @Autowired
     EmailService emailService;
 
@@ -37,17 +38,19 @@ public class EmailController {
             @RequestParam(required = false) MultipartFile attachment
     ) {
         try {
+            log.info("Received request to send email to: {}", to);
+            if (attachment != null) {
+                log.info("Attachment received: {}", attachment.getOriginalFilename());
+            }
+
             EmailRequest emailRequest = EmailRequest.builder()
                     .to(to)
                     .sub(sub)
                     .body(body)
                     .build();
-            log.info("To: "+to);
-            log.info("Sub: "+sub);
-            log.info("body: "+body);
-            log.info((attachment != null ? attachment.getOriginalFilename() : "null"));
 
             emailService.sendMail(emailRequest, attachment);
+            log.info("Email sent successfully to: {}", to);
 
             return ApiResponse.builder()
                     .code(1000)
@@ -55,6 +58,7 @@ public class EmailController {
                     .build();
 
         } catch (Exception e) {
+            log.error("Failed to send email to {}: {}", to, e.getMessage(), e);
             return ApiResponse.builder()
                     .code(500)
                     .message("Error sending mail!: " + e.getMessage())
@@ -63,31 +67,23 @@ public class EmailController {
     }
 
     @PostMapping("/attachment")
-    ResponseEntity<Resource> downloadAttachment (@RequestParam String path){
+    ResponseEntity<Resource> downloadAttachment (@RequestParam String path) {
+        log.info("Downloading sent mail attachment from path: {}", path);
         return emailService.downloadAttachment(path);
     }
 
-//    @GetMapping("/email/inbox/{uid}/attachment")
-//    public ResponseEntity<InputStreamResource> downloadInboxAttachment(
-//            @PathVariable String uid,
-//            @RequestParam(required = false) String filename  // có thể không dùng
-//    ) {
-//        return emailService.streamInboxAttachment(uid, filename);
-//    }
-
-    @GetMapping(
-            value = "/email/inbox/{uid}/attachment"
-    )
+    @GetMapping("/email/inbox/{uid}/attachment")
     public ResponseEntity<?> downloadInboxAttachment(
             @PathVariable String uid,
             @RequestParam(required = false) String filename
     ) {
+        log.info("Downloading inbox attachment for UID: {}, filename: {}", uid, filename);
         return emailService.streamInboxAttachment(uid, filename);
     }
 
-
     @PostMapping("/createmail")
     ApiResponse<EmailResponse> createMail(@Valid @RequestBody EmailRequest emailRequest){
+        log.info("Creating mail entry for user: {}", emailRequest.getTo());
         return ApiResponse.<EmailResponse>builder()
                 .code(1000)
                 .message("Create successfully!")
@@ -97,6 +93,7 @@ public class EmailController {
 
     @GetMapping("/inbox")
     ApiResponse<List<EmailResponse>> getInboxs(){
+        log.info("Fetching inbox emails");
         return ApiResponse.<List<EmailResponse>>builder()
                 .code(1000)
                 .result(emailService.getInboxs())
@@ -105,6 +102,7 @@ public class EmailController {
 
     @GetMapping("/sent")
     ApiResponse<List<EmailResponse>> getSentboxs(){
+        log.info("Fetching sentbox emails");
         return ApiResponse.<List<EmailResponse>>builder()
                 .code(1000)
                 .result(emailService.getSentboxs())
@@ -113,6 +111,7 @@ public class EmailController {
 
     @GetMapping("/email/{id}")
     ApiResponse<EmailResponse> getMail(@PathVariable String id){
+        log.info("Fetching mail with ID: {}", id);
         return ApiResponse.<EmailResponse>builder()
                 .code(1000)
                 .result(emailService.getMail(id))
@@ -121,6 +120,7 @@ public class EmailController {
 
     @GetMapping("/email/inbox/{uid}")
     ApiResponse<EmailResponse> getInboxMail(@PathVariable String uid){
+        log.info("Fetching inbox mail with UID: {}", uid);
         return ApiResponse.<EmailResponse>builder()
                 .code(1000)
                 .result(emailService.getInboxMail(uid))
@@ -129,9 +129,11 @@ public class EmailController {
 
     @PostMapping("/search")
     ApiResponse<Page<EmailResponse>> search(@RequestBody SearchRequest searchRequest){
-        return ApiResponse. <Page<EmailResponse>>builder()
+        log.info("Searching emails with query: {}", searchRequest.getQuery());
+        return ApiResponse.<Page<EmailResponse>>builder()
                 .code(1000)
                 .result(emailService.search(searchRequest))
                 .build();
     }
 }
+

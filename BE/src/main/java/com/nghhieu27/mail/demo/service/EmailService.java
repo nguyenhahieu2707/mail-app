@@ -30,7 +30,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -64,6 +63,8 @@ public class EmailService {
     MailProperties mailProperties;
 
     public void sendMail(EmailRequest emailRequest, MultipartFile attachment) {
+        String to = emailRequest.getTo();
+        log.info("Attempting to send an email to: {}", to);
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper;
@@ -75,84 +76,86 @@ public class EmailService {
 
             String from = SecurityContextHolder.getContext().getAuthentication().getName();
             helper.setFrom(from);
-            helper.setTo(emailRequest.getTo());
+            helper.setTo(to);
             helper.setSubject(emailRequest.getSub());
             helper.setText(emailRequest.getBody(), false); // false = plain text
 
             if (multipart) {
-                byte[] fileBytes = attachment.getBytes(); // Đọc trước
+                log.info("Processing attachment: {}", attachment.getOriginalFilename());
+                byte[] fileBytes = attachment.getBytes();
                 name_file = attachment.getOriginalFilename();
-                log.info(name_file);
-                path_file = saveAttachment(attachment);   // Sau đó lưu
+                path_file = saveAttachment(attachment);
 
                 helper.addAttachment(
                         attachment.getOriginalFilename(),
-                        new ByteArrayResource(fileBytes)       // Dùng lại mảng byte đã đọc
+                        new ByteArrayResource(fileBytes)
                 );
+                log.info("Attachment '{}' added successfully.", name_file);
             }
-
 
             Email email = emailMapper.toEmail(emailRequest);
             email.setFrom(from);
             email.setDate(Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant()));
-            if(path_file!=null){
+            if (path_file != null) {
                 email.setAttachmentPath(path_file);
                 email.setAttachmentName(name_file);
             }
-            emailRepository.save(email);
-            log.info("Final Email: " + email.toString());
+
+            Email savedEmail = emailRepository.save(email);
+            log.info("Email record saved to database with ID: {}", savedEmail.getId());
+
             javaMailSender.send(message);
+            log.info("Successfully sent email to: {}", to);
         } catch (Exception e) {
-            log.error("Failed to send email", e);
+            log.error("Failed to send email to: {}", to, e);
             throw new RuntimeException("Failed to send email", e);
         }
     }
 
     private String saveAttachment(MultipartFile file) throws IOException {
+        log.info("Attempting to save attachment: {}", file.getOriginalFilename());
         String uploadDir = "/app/attachments/";
 
-        // Đảm bảo thư mục tồn tại
         Path uploadPath = Paths.get(uploadDir);
         if (!Files.exists(uploadPath)) {
+            log.warn("Upload directory does not exist. Creating directory: {}", uploadDir);
             Files.createDirectories(uploadPath);
         }
 
-        // Tạo tên file ngẫu nhiên, tránh trùng
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-
-        // Tạo path đầy đủ
         Path filePath = uploadPath.resolve(fileName);
-
-        // Lưu file
         file.transferTo(filePath.toFile());
 
-        System.out.println("File saved: " + filePath.toAbsolutePath());
-
+        log.info("File saved successfully at path: {}", filePath);
         return filePath.toString();
     }
 
-    public ResponseEntity<Resource> downloadAttachment(String path){
+    public ResponseEntity<Resource> downloadAttachment(String path) {
+        log.info("Attempting to download attachment from path: {}", path);
         try {
             Path filePath = Paths.get(path);
             Resource file = new UrlResource(filePath.toUri());
 
             if (!file.exists() || !file.isReadable()) {
+                log.error("Attachment not found or not readable at path: {}", path);
                 throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
             }
 
             String filename = filePath.getFileName().toString();
+            log.info("Attachment '{}' found. Preparing for download.", filename);
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .body(file);
         } catch (Exception e) {
-            log.error("Error downloading attachment", e);
+            log.error("Error downloading attachment from path: {}", path, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     public ResponseEntity<?> streamInboxAttachment(String uidStr, String filenameFilter) {
+        log.info("Attempting to stream attachment from inbox email UID: {} with filter: '{}'", uidStr, filenameFilter);
         Store store = null;
         Folder inbox = null;
 
@@ -167,6 +170,7 @@ public class EmailService {
             store = session.getStore(mailProperties.getProtocol());
 
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            log.info("Connecting to IMAP server {}:{} for user {}", mailProperties.getHost(), mailProperties.getPort(), username);
             store.connect(mailProperties.getHost(), username, mailProperties.getSharedPassword());
 
             inbox = store.getFolder("INBOX");
@@ -174,11 +178,13 @@ public class EmailService {
             UIDFolder uf = (UIDFolder) inbox;
             Message msg = uf.getMessageByUID(Long.parseLong(uidStr));
 
-            if (msg == null || !msg.isMimeType("multipart/*")) {
-                return ResponseEntity
-                        .status(HttpStatus.NOT_FOUND)
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .body("Không tìm thấy email hoặc không có multipart.");
+            if (msg == null) {
+                log.warn("Email with UID: {} not found.", uidStr);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy email.");
+            }
+            if(!msg.isMimeType("multipart/*")){
+                log.warn("Email with UID: {} is not multipart.", uidStr);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email không chứa tệp đính kèm.");
             }
 
             Multipart multipart = (Multipart) msg.getContent();
@@ -189,7 +195,7 @@ public class EmailService {
                     if (filenameFilter != null && !filenameFilter.equals(fname)) {
                         continue;
                     }
-
+                    log.info("Found attachment '{}'. Preparing to stream.", fname);
                     byte[] fileBytes = part.getInputStream().readAllBytes();
                     InputStreamResource resource = new InputStreamResource(new java.io.ByteArrayInputStream(fileBytes));
 
@@ -201,13 +207,14 @@ public class EmailService {
                 }
             }
 
+            log.warn("No matching attachment found for UID: {} with filter: {}", uidStr, filenameFilter);
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Không tìm thấy tệp đính kèm hợp lệ.");
 
         } catch (Exception e) {
-            log.error("Lỗi khi xử lý tệp đính kèm", e);
+            log.error("Error streaming attachment for UID: {}", uidStr, e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .contentType(MediaType.TEXT_PLAIN)
@@ -217,120 +224,46 @@ public class EmailService {
             try {
                 if (inbox != null && inbox.isOpen()) inbox.close(false);
                 if (store != null && store.isConnected()) store.close();
+                log.info("IMAP connection closed for attachment streaming.");
             } catch (MessagingException me) {
-                log.warn("Không thể đóng kết nối IMAP", me);
+                log.warn("Could not close IMAP connection cleanly.", me);
             }
         }
     }
 
-
-    public Page<EmailResponse> search(SearchRequest searchRequest){
+    public Page<EmailResponse> search(SearchRequest searchRequest) {
+        log.info("Performing advanced search with request: {}", searchRequest);
         Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), Sort.by("date"));
         Page<Email> emailPage = emailRepository.advancedSearch(searchRequest.getQuery(), searchRequest.getFromDate(), searchRequest.getToDate(), searchRequest.isHasAttachment(), pageable);
+        log.info("Search completed. Found {} emails.", emailPage.getTotalElements());
         return emailPage.map(emailMapper::toEmailResponse);
     }
 
-    public EmailResponse createMail(EmailRequest emailRequest){
+    public EmailResponse createMail(EmailRequest emailRequest) {
+        log.info("Creating a new email record (draft) for recipient: {}", emailRequest.getTo());
         Email email = emailMapper.toEmail(emailRequest);
-
-        return emailMapper.toEmailResponse(emailRepository.save(email));
+        Email savedEmail = emailRepository.save(email);
+        log.info("Email record created with ID: {}", savedEmail.getId());
+        return emailMapper.toEmailResponse(savedEmail);
     }
 
-    public EmailResponse getMail(String id){
-        return emailMapper.toEmailResponse(emailRepository.findById(id).orElseThrow());
+    public EmailResponse getMail(String id) {
+        log.info("Fetching email from database with ID: {}", id);
+        Email email = emailRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.error("Email with ID: {} not found in database.", id);
+                    return new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION); // Hoặc một lỗi cụ thể hơn
+                });
+        return emailMapper.toEmailResponse(email);
     }
-
-//    public EmailResponse getInboxMail(String uid){
-//        Store store = null;
-//        Folder inbox = null;
-//
-//        try {
-//
-//            System.out.println("protocol: " + mailProperties.getProtocol());
-//            System.out.println("host: " + mailProperties.getHost());
-//            System.out.println("port: " + mailProperties.getPort());
-//
-//            Properties props = new Properties();
-//            props.put("mail.store.protocol", mailProperties.getProtocol());
-//            props.put("mail.imap.host", mailProperties.getHost());
-//            props.put("mail.imap.port", String.valueOf(mailProperties.getPort()));
-//            props.put("mail.imap.starttls.enable", "false");
-//
-//            Session session = Session.getDefaultInstance(props);
-//            store = session.getStore(mailProperties.getProtocol());
-//
-//            String username = SecurityContextHolder.getContext().getAuthentication().getName();
-//
-//            store.connect(
-//                    mailProperties.getHost(),
-//                    username,
-//                    mailProperties.getSharedPassword()
-//            );
-//
-//            inbox = store.getFolder("INBOX");
-//            inbox.open(Folder.READ_ONLY);
-//
-//            UIDFolder uf = (UIDFolder)inbox;
-//            Long longUid = Long.parseLong(uid);
-//            Message msg = uf.getMessageByUID(longUid);
-//
-//            EmailResponse emailResponse = new EmailResponse();
-//            emailResponse.setFrom(((InternetAddress) msg.getFrom()[0]).toUnicodeString());
-//            emailResponse.setSub(msg.getSubject());
-//            //emailResponse.setBody(msg.getContent().toString());
-//            emailResponse.setDate(msg.getSentDate());
-//
-//            // Xử lý body và attachment
-//            if (msg.isMimeType("text/plain")) {
-//                emailResponse.setBody(msg.getContent().toString());
-//            } else if (msg.isMimeType("multipart/*")) {
-//                Multipart mp = (Multipart) msg.getContent();
-//                for (int i = 0; i < mp.getCount(); i++) {
-//                    BodyPart part = mp.getBodyPart(i);
-//
-//                    // phần text
-//                    if (part.isMimeType("text/plain") && emailResponse.getBody() == null) {
-//                        emailResponse.setBody(part.getContent().toString());
-//                    }
-//
-//                    // phần attachment
-//                    String disp = part.getDisposition();
-//                    if (disp != null && disp.equalsIgnoreCase(Part.ATTACHMENT)) {
-//                        String fname = part.getFileName();
-//                        emailResponse.setAttachmentName(fname);
-//                        // không cần lưu đường dẫn, vì ta stream trực tiếp qua endpoint GET
-//                        break;
-//                    }
-//                }
-//            }
-//
-//            return emailResponse;
-//
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        }
-//        finally {
-//            try {
-//                if (inbox != null && inbox.isOpen()) {
-//                    inbox.close(false);
-//                }
-//                if (store != null && store.isConnected()) {
-//                    store.close();
-//                }
-//            } catch (Exception ex) {
-//                ex.printStackTrace();
-//            }
-//        }
-//    }
 
     public EmailResponse getInboxMail(String uid) {
+        log.info("Fetching details for inbox email with UID: {}", uid);
         Store store = null;
         Folder inbox = null;
 
         try {
-            log.info("protocol: {}", mailProperties.getProtocol());
-            log.info("host: {}", mailProperties.getHost());
-            log.info("port: {}", mailProperties.getPort());
+            log.info("Connecting to IMAP server {}:{} with protocol {}", mailProperties.getHost(), mailProperties.getPort(), mailProperties.getProtocol());
 
             Properties props = new Properties();
             props.put("mail.store.protocol", mailProperties.getProtocol());
@@ -343,31 +276,34 @@ public class EmailService {
 
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
             store.connect(mailProperties.getHost(), username, mailProperties.getSharedPassword());
+            log.info("IMAP connection successful for user: {}", username);
 
             inbox = store.getFolder("INBOX");
             inbox.open(Folder.READ_ONLY);
 
             UIDFolder uf = (UIDFolder) inbox;
             Message msg = uf.getMessageByUID(Long.parseLong(uid));
-            if (msg == null) throw new RuntimeException("Không tìm thấy thư");
+            if (msg == null) {
+                log.error("Email with UID {} not found in INBOX.", uid);
+                throw new RuntimeException("Không tìm thấy thư");
+            }
+            log.info("Successfully fetched message for UID: {}", uid);
 
             EmailResponse emailResponse = new EmailResponse();
             emailResponse.setFrom(((InternetAddress) msg.getFrom()[0]).toUnicodeString());
             emailResponse.setSub(msg.getSubject());
             emailResponse.setDate(msg.getSentDate());
 
-            // Xử lý body (plain/html/đệ quy)
             String bodyText = extractTextFromMessage(msg);
             emailResponse.setBody(bodyText);
 
-            // Xử lý attachment
             if (msg.isMimeType("multipart/*")) {
                 Multipart mp = (Multipart) msg.getContent();
                 for (int i = 0; i < mp.getCount(); i++) {
                     BodyPart part = mp.getBodyPart(i);
-                    String disp = part.getDisposition();
-                    if (disp != null && disp.equalsIgnoreCase(Part.ATTACHMENT)) {
+                    if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
                         emailResponse.setAttachmentName(part.getFileName());
+                        log.info("Found attachment in email UID {}: {}", uid, part.getFileName());
                         break;
                     }
                 }
@@ -376,26 +312,24 @@ public class EmailService {
             return emailResponse;
 
         } catch (Exception e) {
-            log.error("Lỗi khi đọc mail inbox", e);
+            log.error("Failed to read inbox email with UID: {}", uid, e);
             throw new RuntimeException("Không thể đọc mail inbox", e);
         } finally {
             try {
                 if (inbox != null && inbox.isOpen()) inbox.close(false);
                 if (store != null && store.isConnected()) store.close();
+                log.info("IMAP connection closed for getInboxMail.");
             } catch (Exception e) {
-                log.warn("Lỗi khi đóng kết nối mail", e);
+                log.warn("Error closing IMAP resources for getInboxMail.", e);
             }
         }
     }
 
     private String extractTextFromMessage(Message message) throws Exception {
-        if (message.isMimeType("text/plain")) {
-            return message.getContent().toString();
-        } else if (message.isMimeType("text/html")) {
+        if (message.isMimeType("text/plain") || message.isMimeType("text/html")) {
             return message.getContent().toString();
         } else if (message.isMimeType("multipart/*")) {
-            Multipart mp = (Multipart) message.getContent();
-            return extractTextFromMultipart(mp);
+            return extractTextFromMultipart((Multipart) message.getContent());
         }
         return "";
     }
@@ -403,42 +337,38 @@ public class EmailService {
     private String extractTextFromMultipart(Multipart multipart) throws Exception {
         for (int i = 0; i < multipart.getCount(); i++) {
             BodyPart part = multipart.getBodyPart(i);
-
             if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
-                continue; // skip attachment
+                continue;
             }
-
-            if (part.isMimeType("text/html")) {
+            if (part.isMimeType("text/html") || part.isMimeType("text/plain")) {
                 return part.getContent().toString();
-            } else if (part.isMimeType("text/plain")) {
-                return part.getContent().toString(); // fallback
             } else if (part.isMimeType("multipart/*")) {
-                return extractTextFromMultipart((Multipart) part.getContent());
+                String content = extractTextFromMultipart((Multipart) part.getContent());
+                if (!content.isEmpty()) {
+                    return content;
+                }
             }
         }
         return "";
     }
 
-
-    public List<EmailResponse> getSentboxs(){
+    public List<EmailResponse> getSentboxs() {
         String from = SecurityContextHolder.getContext().getAuthentication().getName();
+        log.info("Fetching sentbox for user: {}", from);
         List<Email> emails = emailRepository.findByFrom(from).orElse(Collections.emptyList());
+        log.info("Found {} emails in sentbox for user: {}", emails.size(), from);
         return emailMapper.toListEmailResponse(emails);
     }
 
-    public List<EmailResponse> getInboxs(){
+    public List<EmailResponse> getInboxs() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        log.info("Fetching latest 10 inbox emails for user: {}", username);
         List<EmailResponse> inboxs = new ArrayList<>();
         Store store = null;
         Folder inbox = null;
 
         try {
-
-            System.out.println("protocol: " + mailProperties.getProtocol());
-            System.out.println("host: " + mailProperties.getHost());
-            System.out.println("port: " + mailProperties.getPort());
-//            System.out.println("username: " + mailProperties.getUsername());
-//            System.out.println("password: " + mailProperties.getPassword());
-
+            log.info("Connecting to IMAP server {}:{} with protocol {}", mailProperties.getHost(), mailProperties.getPort(), mailProperties.getProtocol());
             Properties props = new Properties();
             props.put("mail.store.protocol", mailProperties.getProtocol());
             props.put("mail.imap.host", mailProperties.getHost());
@@ -448,53 +378,41 @@ public class EmailService {
             Session session = Session.getDefaultInstance(props);
             store = session.getStore(mailProperties.getProtocol());
 
-            String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
-            store.connect(
-                    mailProperties.getHost(),
-                    username,
-                    mailProperties.getSharedPassword()
-            );
+            store.connect(mailProperties.getHost(), username, mailProperties.getSharedPassword());
+            log.info("IMAP connection successful for user: {}", username);
 
             inbox = store.getFolder("INBOX");
             inbox.open(Folder.READ_ONLY);
 
             UIDFolder uf = (UIDFolder) inbox;
-
             Message[] messages = inbox.getMessages();
-            for (int i = messages.length - 1; i >= Math.max(0, messages.length - 10); i--) {
+            int start = Math.max(0, messages.length - 10);
+            log.info("Found {} total messages in INBOX. Processing from index {}.", messages.length, start);
+
+            for (int i = messages.length - 1; i >= start; i--) {
                 Message message = messages[i];
                 Email email = new Email();
 
-                long uid = uf.getUID(message);
-                email.setId(String.valueOf(uid));
-
+                email.setId(String.valueOf(uf.getUID(message)));
                 Address[] fromAddresses = message.getFrom();
-                if (fromAddresses != null && fromAddresses.length > 0) {
-                    email.setFrom(fromAddresses[0].toString());
-                } else {
-                    email.setFrom("unknown");
-                }
-
+                email.setFrom( (fromAddresses != null && fromAddresses.length > 0) ? fromAddresses[0].toString() : "unknown");
                 email.setSub(message.getSubject());
                 email.setBody(message.getContent().toString());
                 email.setDate(message.getSentDate());
                 inboxs.add(emailMapper.toEmailResponse(email));
             }
+            log.info("Successfully processed {} emails from inbox.", inboxs.size());
             return inboxs;
         } catch (Exception e) {
+            log.error("Failed to fetch inbox for user: {}", username, e);
             throw new RuntimeException(e);
-        }
-        finally {
+        } finally {
             try {
-                if (inbox != null && inbox.isOpen()) {
-                    inbox.close(false); // đóng folder
-                }
-                if (store != null && store.isConnected()) {
-                    store.close(); // đóng kết nối IMAP
-                }
+                if (inbox != null && inbox.isOpen()) inbox.close(false);
+                if (store != null && store.isConnected()) store.close();
+                log.info("IMAP connection closed for getInboxs.");
             } catch (Exception ex) {
-                ex.printStackTrace();
+                log.warn("Could not close IMAP resources cleanly after fetching inbox.", ex);
             }
         }
     }
