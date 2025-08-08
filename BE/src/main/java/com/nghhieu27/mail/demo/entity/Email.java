@@ -1,5 +1,6 @@
 package com.nghhieu27.mail.demo.entity;
 
+import com.nghhieu27.mail.demo.enums.Type;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -33,4 +34,7 @@ public class Email {
 
     @Column(name = "attachment_path")
     String attachmentPath;
+
+    @Enumerated(EnumType.STRING)
+    Type type;
 }

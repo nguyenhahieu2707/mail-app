@@ -21,19 +21,38 @@ public interface EmailRepository extends JpaRepository<Email, String> {
 
     Optional<List<Email>> findByFrom(String from);
 
+//    @Query("SELECT e FROM Email e WHERE " +
+//            "(:keyword IS NULL OR LOWER(e.sub) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+//            "   OR LOWER(e.body) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+//            //"(:folder IS NULL OR e.folder = :folder) AND " +
+//            "(:fromDate IS NULL OR e.date >= :fromDate) AND " +
+//            "(:toDate IS NULL OR e.date <= :toDate) AND " +
+//            "(:hasAttachment IS FALSE OR e.attachmentPath IS NOT NULL)")
+//    Page<Email> advancedSearch(
+//            @Param("keyword") String keyword,
+//            //@Param("folder") Folder folder,
+//            @Param("fromDate") Date fromDate,
+//            @Param("toDate") Date toDate,
+//            @Param("hasAttachment") boolean hasAttachment,
+//            Pageable pageable
+//    );
+
     @Query("SELECT e FROM Email e WHERE " +
             "(:keyword IS NULL OR LOWER(e.sub) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "   OR LOWER(e.body) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
-            //"(:folder IS NULL OR e.folder = :folder) AND " +
+            "(:from IS NULL OR LOWER(e.from) LIKE LOWER(CONCAT('%', :from, '%'))) AND " +
+            // "(:folder IS NULL OR e.folder = :folder) AND " +
             "(:fromDate IS NULL OR e.date >= :fromDate) AND " +
             "(:toDate IS NULL OR e.date <= :toDate) AND " +
             "(:hasAttachment IS FALSE OR e.attachmentPath IS NOT NULL)")
     Page<Email> advancedSearch(
             @Param("keyword") String keyword,
-            //@Param("folder") Folder folder,
+            @Param("from") String from,
+            // @Param("folder") Folder folder,
             @Param("fromDate") Date fromDate,
             @Param("toDate") Date toDate,
             @Param("hasAttachment") boolean hasAttachment,
             Pageable pageable
     );
+
 }

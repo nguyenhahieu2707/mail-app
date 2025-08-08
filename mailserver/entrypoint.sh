@@ -2,6 +2,7 @@ echo "[ENTRYPOINT] Cleaning up old sockets..."
 rm -f /var/spool/postfix/private/dovecot-lmtp
 rm -f /var/run/dovecot/master.pid
 rm -rf /run/dovecot
+rm -f /run/rsyslogd.pid
 mkdir -p /run/dovecot
 chown dovecot:dovecot /run/dovecot
 chmod 755 /run/dovecot

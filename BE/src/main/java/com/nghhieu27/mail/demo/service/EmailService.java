@@ -23,6 +23,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -35,6 +36,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.nghhieu27.mail.demo.enums.Type;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,6 +77,7 @@ public class EmailService {
             helper = new MimeMessageHelper(message, multipart);
 
             String from = SecurityContextHolder.getContext().getAuthentication().getName();
+            log.info("Logged in user (from): {}", from);
             helper.setFrom(from);
             helper.setTo(to);
             helper.setSubject(emailRequest.getSub());
@@ -95,6 +98,8 @@ public class EmailService {
 
             Email email = emailMapper.toEmail(emailRequest);
             email.setFrom(from);
+            email.setType(Type.SENT);
+            log.info("Email type: {}", email.getType());
             email.setDate(Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant()));
             if (path_file != null) {
                 email.setAttachmentPath(path_file);
@@ -231,13 +236,115 @@ public class EmailService {
         }
     }
 
-    public Page<EmailResponse> search(SearchRequest searchRequest) {
-        log.info("Performing advanced search with request: {}", searchRequest);
-        Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), Sort.by("date"));
-        Page<Email> emailPage = emailRepository.advancedSearch(searchRequest.getQuery(), searchRequest.getFromDate(), searchRequest.getToDate(), searchRequest.isHasAttachment(), pageable);
-        log.info("Search completed. Found {} emails.", emailPage.getTotalElements());
-        return emailPage.map(emailMapper::toEmailResponse);
+    public Page<EmailResponse> search(SearchRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), Sort.by("date").descending());
+        List<Email> combined = new ArrayList<>();
+
+        // 1. Email đã gửi trong DB
+        if(request.getType().equals(Type.SENT)||request.getType().equals(Type.ALL)) {
+            Page<Email> sentPage = emailRepository.advancedSearch(
+                    request.getQuery(),
+                    username,
+                    request.getFromDate(),
+                    request.getToDate(),
+                    request.isHasAttachment(),
+                    Pageable.unpaged()
+            );
+            combined.addAll(sentPage.getContent());
+        }
+
+        // 2. Email đã nhận trong Dovecot
+        if(request.getType().equals(Type.INBOX)||request.getType().equals(Type.ALL)) {
+            List<Email> received = searchInboxViaIMAP(request, username);
+            combined.addAll(received);
+        }
+
+        // 3. Gộp và sắp xếp theo ngày gửi mới nhất
+        combined.sort(Comparator.comparing(Email::getDate).reversed());
+
+        // 4. Phân trang thủ công
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), combined.size());
+        List<EmailResponse> pagedContent = combined.subList(start, end).stream()
+                .map(emailMapper::toEmailResponse)
+                .toList();
+
+        return new PageImpl<>(pagedContent, pageable, combined.size());
     }
+
+
+    private List<Email> searchInboxViaIMAP(SearchRequest request, String username) {
+        List<Email> result = new ArrayList<>();
+
+        try {
+            Properties props = new Properties();
+            props.put("mail.store.protocol", mailProperties.getProtocol());
+            props.put("mail.imap.host", mailProperties.getHost());
+            props.put("mail.imap.port", String.valueOf(mailProperties.getPort()));
+            props.put("mail.imap.starttls.enable", "false");
+
+            Session session = Session.getDefaultInstance(props);
+            Store store = session.getStore(mailProperties.getProtocol());
+            store.connect(mailProperties.getHost(), username, mailProperties.getSharedPassword());
+
+            Folder inbox = store.getFolder("INBOX");
+            inbox.open(Folder.READ_ONLY);
+            Message[] messages = inbox.getMessages();
+
+            for (Message msg : messages) {
+                String body = extractTextFromMessage(msg);
+                String subject = msg.getSubject();
+                String from = ((InternetAddress) msg.getFrom()[0]).getAddress();
+                Date sentDate = msg.getSentDate();
+
+                String keyword = Optional.ofNullable(request.getQuery()).orElse("").toLowerCase();
+                if (!keyword.isEmpty() &&
+                        (subject == null || !subject.toLowerCase().contains(keyword)) &&
+                        (body == null || !body.toLowerCase().contains(keyword))) {
+                    continue;
+                }
+
+                // Filter theo date
+                if (request.getFromDate() != null && sentDate.before(request.getFromDate())) continue;
+                if (request.getToDate() != null && sentDate.after(request.getToDate())) continue;
+
+                // Filter hasAttachment
+                boolean hasAttachment = false;
+                if (msg.isMimeType("multipart/*")) {
+                    Multipart mp = (Multipart) msg.getContent();
+                    for (int i = 0; i < mp.getCount(); i++) {
+                        BodyPart part = mp.getBodyPart(i);
+                        if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
+                            hasAttachment = true;
+                            break;
+                        }
+                    }
+                }
+                if (request.isHasAttachment() && !hasAttachment) continue;
+
+                Email email = new Email();
+                UIDFolder uf = (UIDFolder) inbox;
+                email.setId(String.valueOf(uf.getUID(msg)));
+                email.setFrom(from);
+                email.setTo(username);
+                email.setSub(subject);
+                email.setBody(body);
+                email.setDate(sentDate);
+                email.setType(Type.INBOX);
+                if (hasAttachment) email.setAttachmentName("Có đính kèm"); // placeholder
+                result.add(email);
+            }
+
+            inbox.close(false);
+            store.close();
+        } catch (Exception e) {
+            log.error("Failed to search inbox via IMAP", e);
+        }
+
+        return result;
+    }
+
 
     public EmailResponse createMail(EmailRequest emailRequest) {
         log.info("Creating a new email record (draft) for recipient: {}", emailRequest.getTo());

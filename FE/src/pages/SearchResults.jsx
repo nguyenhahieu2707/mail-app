@@ -4,8 +4,6 @@ import axios from 'axios';
 import SearchBarWithFilters from './SearchBarWithFilters.jsx';
 import EmailList from '../components/EmailList.jsx';
 
-//const API_URL = 'http://localhost:8080';
-
 const authHeader = () => ({
   headers: {
     Authorization: `Bearer ${localStorage.getItem('accessToken')}`
@@ -21,7 +19,8 @@ function SearchResults() {
     query: queryParam,
     fromDate: null,
     toDate: null,
-    hasAttachment: false
+    hasAttachment: false,
+    type: 'ALL'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

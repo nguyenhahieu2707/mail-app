@@ -1,5 +1,8 @@
 package com.nghhieu27.mail.demo.dto.response;
 
+import com.nghhieu27.mail.demo.enums.Folder;
+import com.nghhieu27.mail.demo.enums.Type;
+import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -22,4 +25,7 @@ public class EmailResponse {
     Date date;
     String attachmentName;
     String attachmentPath;
+
+    @Enumerated
+    Type type;
 }

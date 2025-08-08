@@ -1,6 +1,7 @@
 package com.nghhieu27.mail.demo.dto.request;
 
 import com.nghhieu27.mail.demo.enums.Folder;
+import com.nghhieu27.mail.demo.enums.Type;
 import jakarta.persistence.Enumerated;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -25,4 +26,6 @@ public class SearchRequest {
     boolean hasAttachment;
     @Enumerated
     Folder folder;
+    @Enumerated
+    Type type;
 }
