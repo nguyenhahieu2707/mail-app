@@ -1,21 +1,3 @@
-// import { defineConfig } from 'vite';
-// import react from '@vitejs/plugin-react';
-
-// export default defineConfig({
-//     plugins: [react()],
-//     server: {
-//         port: 80,
-//         host: true,
-//         proxy: {
-//             '/inbox': 'http://localhost:8080',
-//             '/sent': 'http://localhost:8080',
-//             '/email': 'http://localhost:8080',
-//             '/mail': 'http://localhost:8080'
-//         }
-//     }
-// });
-
-
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -28,6 +10,8 @@ export default defineConfig({
     port: 80,
     host: true,
     proxy: {
+      // Thêm /users vào danh sách proxy
+      '/users': 'http://localhost:8080',
       '/inbox': 'http://localhost:8080',
       '/sent': 'http://localhost:8080',
       '/email': 'http://localhost:8080',

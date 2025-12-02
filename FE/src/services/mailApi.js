@@ -75,3 +75,20 @@ export const searchEmails = async (searchQuery) => {
     throw error;
   }
 };
+
+export const getMailDetail = async (type, id) => {
+    try {
+        if (type === 'inbox') {
+            // Email nhận qua IMAP, dùng UID
+            return await getInboxEmail(id);
+        }
+        if (type === 'sent') {
+            // Email đã gửi, lưu trong MySQL, dùng ID
+            return await getEmailById(id);
+        }
+        throw new Error(`Unsupported mail type: ${type}`);
+    } catch (error) {
+        remoteLogger.error(`getMailDetail failed (type=${type}, id=${id}): ${error.message}`);
+        throw error;
+    }
+};

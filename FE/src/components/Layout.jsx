@@ -1,157 +1,79 @@
-// // import React from 'react';
-// // import { Link, Outlet, useNavigate } from 'react-router-dom';
-// // import MailNotification from './MailNotification'; // 👈 Import notification component
-
-// // export function MainLayout() {
-// //   const navigate = useNavigate();
-
-// //   const handleLogout = () => {
-// //     navigate('/logout');
-// //   };
-
-// //   return (
-// //     <div className="container-fluid">
-// //       <nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
-// //         <div className="container d-flex justify-content-between w-100">
-// //           <div className="navbar-nav">
-// //             <a className="navbar-brand" href="#">Email Client</a>
-// //             <Link to="/inbox" className="nav-link">Inbox</Link>
-// //             <Link to="/sent" className="nav-link">Sent Box</Link>
-// //             <Link to="/compose" className="nav-link">Compose</Link>
-// //           </div>
-// //           <button
-// //             onClick={handleLogout}
-// //             className="btn btn-outline-danger"
-// //           >
-// //             Logout
-// //           </button>
-// //         </div>
-// //       </nav>
-
-// //       {/* 👇 Hiển thị danh sách hoặc popup mail realtime */}
-// //       <MailNotification />
-
-// //       {/* Outlet để render route con */}
-// //       <Outlet />
-// //     </div>
-// //   );
-// // }
-
-// // export function AuthLayout() {
-// //   return (
-// //     <div className="container-fluid">
-// //       <Outlet />
-// //     </div>
-// //   );
-// // }
-
-// import React from 'react';
-// import { Link, Outlet, useNavigate } from 'react-router-dom';
-// import MailNotification from './MailNotification';
-
-// export function MainLayout() {
-//   const navigate = useNavigate();
-
-//   const handleLogout = () => {
-//     navigate('/logout');
-//   };
-
-//   return (
-//     <div className="container-fluid">
-//       <nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
-//         <div className="container d-flex justify-content-between w-100 align-items-center">
-//           <div className="navbar-nav">
-//             <a className="navbar-brand" href="#">Email Client</a>
-//             <Link to="/inbox" className="nav-link">Inbox</Link>
-//             <Link to="/sent" className="nav-link">Sent Box</Link>
-//             <Link to="/compose" className="nav-link">Compose</Link>
-//           </div>
-//           <div className="d-flex align-items-center">
-//             <MailNotification />
-//             <button
-//               onClick={handleLogout}
-//               className="btn btn-outline-danger ms-3"
-//             >
-//               Logout
-//             </button>
-//           </div>
-//         </div>
-//       </nav>
-
-//       {/* Outlet để render route con */}
-//       <Outlet />
-//     </div>
-//   );
-// }
-
-// export function AuthLayout() {
-//   return (
-//     <div className="container-fluid">
-//       <Outlet />
-//     </div>
-//   );
-// }
-
-import React, { useState } from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import MailNotification from './MailNotification';
 
-export function MainLayout() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
+// Import CSS và các thành phần icon từ react-icons
+import './Layout.css';
+import { FiEdit, FiInbox, FiSend, FiSearch, FiUser } from 'react-icons/fi';
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
+export function MainLayout() {
+  const navigate = useNavigate();
+  const userEmail = localStorage.getItem('email') || 'user@example.com';
+
+  const handleLogout = () => {
+    if (window.confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
+      navigate('/logout');
     }
   };
 
-  const handleLogout = () => {
-    navigate('/logout');
-  };
-
   return (
-    <div className="container-fluid">
-      <nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
-        <div className="container d-flex justify-content-between w-100 align-items-center">
-          <div className="navbar-nav">
-            <a className="navbar-brand" href="#">Email Client</a>
-            <Link to="/inbox" className="nav-link">Inbox</Link>
-            <Link to="/sent" className="nav-link">Sent Box</Link>
-            <Link to="/compose" className="nav-link">Compose</Link>
+    <div className="layout-container">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <h4 className="mb-4">Mail App</h4>
+        
+        <div className="d-grid mb-4">
+          <NavLink to="/compose" className="btn btn-primary d-flex align-items-center justify-content-center">
+            <FiEdit className="me-2" />Soạn thư
+          </NavLink>
+        </div>
+
+        {/* Menu */}
+        <ul className="nav flex-column nav-pills">
+          <li className="nav-item">
+            <NavLink to="/inbox" className="nav-link">
+              <FiInbox className="me-2" />Hộp thư đến
+            </NavLink>
+          </li>
+          <li className="nav-item">
+            <NavLink to="/sent" className="nav-link">
+              <FiSend className="me-2" />Đã gửi
+            </NavLink>
+          </li>
+          <li className="nav-item">
+            <NavLink to="/search" className="nav-link">
+              <FiSearch className="me-2" />Tìm kiếm
+            </NavLink>
+          </li>
+        </ul>
+
+        {/* User Info & Logout */}
+        <div className="position-absolute bottom-0 start-0 p-3 w-100">
+          <div className="d-flex align-items-center mb-2">
+            <MailNotification />
           </div>
           <div className="d-flex align-items-center">
-            <form className="d-flex me-3" onSubmit={handleSearch}>
-              <input
-                className="form-control me-2"
-                type="search"
-                placeholder="Search emails"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button className="btn btn-outline-success" type="submit">
-                Search
-              </button>
-            </form>
-            <MailNotification />
-            <button
-              onClick={handleLogout}
-              className="btn btn-outline-danger ms-3"
-            >
-              Logout
-            </button>
+            <FiUser size={32} className="me-2 flex-shrink-0" />
+            <div className="text-truncate">
+              <strong className="d-block text-truncate">{userEmail}</strong>
+              <a href="#" onClick={handleLogout} className="d-block text-muted small text-decoration-none">
+                Đăng xuất
+              </a>
+            </div>
           </div>
         </div>
-      </nav>
-      <Outlet />
+      </div>
+
+      {/* Main Content Area */}
+      <main className="main-content">
+        <Outlet />
+      </main>
     </div>
   );
 }
 
 export function AuthLayout() {
   return (
-    <div className="container-fluid">
+    <div>
       <Outlet />
     </div>
   );

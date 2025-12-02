@@ -1,35 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FiMail, FiLock, FiLoader, FiGrid, FiUser } from 'react-icons/fi';
-import './Login.css';
+import { FiMail, FiLock, FiLoader, FiUser } from 'react-icons/fi';
+import './Login.css'; // Đảm bảo CSS được import
 
 function Login() {
-  // State cho chế độ (đăng nhập / đăng ký)
   const [isRegisterMode, setIsRegisterMode] = useState(false);
-
-  // State cho các form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // Thêm cho form đăng ký
-  const [firstName, setFirstName] = useState('');             // Thêm cho form đăng ký
-  const [lastName, setLastName] = useState('');               // Thêm cho form đăng ký
-
-  // State cho thông báo và tải
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
   const navigate = useNavigate();
-
-  // --- HÀM XỬ LÝ ---
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     setSuccessMessage('');
-
     try {
       const response = await axios.post('/auth/token', { email, password });
       const { result } = response.data;
@@ -50,18 +41,15 @@ function Login() {
       setError('Mật khẩu xác nhận không khớp.');
       return;
     }
-    
     setIsLoading(true);
     setError('');
     setSuccessMessage('');
-
     try {
       const requestBody = { email, password, firstName, lastName };
-      await axios.post('/users', requestBody); // Gọi API đăng ký
+      await axios.post('/users', requestBody);
       setSuccessMessage('Đăng ký thành công! Vui lòng đăng nhập.');
-      toggleMode(); // Chuyển về màn hình đăng nhập
+      toggleMode();
     } catch (err) {
-      // Xử lý lỗi từ backend (ví dụ: email đã tồn tại)
       const errorMessage = err.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
       setError(errorMessage);
     } finally {
@@ -69,17 +57,8 @@ function Login() {
     }
   };
 
-  const handleLaoIDLogin = () => {
-    // Logic không đổi
-    const clientId = '660dfa27-5a95-4c88-8a55-abe1310bf579';
-    const redirectUri = 'http://localhost/laoid/auth/callback';
-    const loginUrl = `https://demo-sso.tinasoft.io/login?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&use_callback_uri=true`;
-    window.location.href = loginUrl;
-  };
-
   const toggleMode = () => {
     setIsRegisterMode(!isRegisterMode);
-    // Reset state khi chuyển chế độ
     setError('');
     setSuccessMessage('');
     setEmail('');
@@ -89,68 +68,85 @@ function Login() {
     setLastName('');
   };
 
-  // --- GIAO DIỆN ---
+  // Render form đăng nhập hoặc đăng ký dựa trên state
+  const renderLogin = () => (
+    <div className="card p-4 login-card">
+      <div className="card-body">
+        <div className="text-center mb-4">
+          <h2 className="card-title fw-bold">Chào mừng trở lại</h2>
+          <p className="text-muted">Đăng nhập để tiếp tục</p>
+        </div>
+        <form onSubmit={handleLogin}>
+          <div className="mb-3 position-relative">
+            <FiMail className="form-icon" />
+            <input type="email" className="form-control form-control-icon" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required disabled={isLoading} />
+          </div>
+          <div className="mb-3 position-relative">
+            <FiLock className="form-icon" />
+            <input type="password" className="form-control form-control-icon" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mật khẩu" required disabled={isLoading} />
+          </div>
+          <div className="d-grid mb-3">
+            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+              {isLoading ? <FiLoader className="spinner" /> : 'Đăng nhập'}
+            </button>
+          </div>
+        </form>
+        <p className="text-center mt-4">
+          Chưa có tài khoản? <a href="#" onClick={toggleMode}>Đăng ký</a>
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderRegister = () => (
+    <div className="card p-4 login-card">
+      <div className="card-body">
+        <div className="text-center mb-4">
+          <h2 className="card-title fw-bold">Tạo tài khoản mới</h2>
+          <p className="text-muted">Điền thông tin để bắt đầu</p>
+        </div>
+        <form onSubmit={handleRegister}>
+          <div className="row">
+            <div className="col-md-6 mb-3 position-relative">
+              <FiUser className="form-icon" />
+              <input type="text" className="form-control form-control-icon" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Họ" required disabled={isLoading} />
+            </div>
+            <div className="col-md-6 mb-3 position-relative">
+              <FiUser className="form-icon" />
+              <input type="text" className="form-control form-control-icon" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Tên" required disabled={isLoading} />
+            </div>
+          </div>
+          <div className="mb-3 position-relative">
+            <FiMail className="form-icon" />
+            <input type="email" className="form-control form-control-icon" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required disabled={isLoading} />
+          </div>
+          <div className="mb-3 position-relative">
+            <FiLock className="form-icon" />
+            <input type="password" className="form-control form-control-icon" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mật khẩu" required disabled={isLoading} />
+          </div>
+          <div className="mb-3 position-relative">
+            <FiLock className="form-icon" />
+            <input type="password" className="form-control form-control-icon" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Xác nhận mật khẩu" required disabled={isLoading} />
+          </div>
+          <div className="d-grid mb-3">
+            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+              {isLoading ? <FiLoader className="spinner" /> : 'Đăng ký'}
+            </button>
+          </div>
+        </form>
+        <p className="text-center mt-4">
+          Đã có tài khoản? <a href="#" onClick={toggleMode}>Đăng nhập ngay</a>
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="login-container">
-      <div className="login-card">
-        <h2 className="login-title">{isRegisterMode ? 'Tạo tài khoản mới' : 'Chào mừng trở lại'}</h2>
-        <p className="login-subtitle">{isRegisterMode ? 'Điền thông tin để bắt đầu' : 'Đăng nhập để tiếp tục'}</p>
-
-        {error && <div className="login-error">{error}</div>}
-        {successMessage && <div className="login-success">{successMessage}</div>}
-
-        <form onSubmit={isRegisterMode ? handleRegister : handleLogin} className="login-form">
-          {/* Trường cho đăng ký */}
-          {isRegisterMode && (
-            <>
-              <div className="input-wrapper">
-                <FiUser className="input-icon" />
-                <input type="text" className="form-input" value={firstName} onChange={(e) => setFirstName(e.target.value)} required placeholder="Họ" disabled={isLoading} />
-              </div>
-              <div className="input-wrapper">
-                <FiUser className="input-icon" />
-                <input type="text" className="form-input" value={lastName} onChange={(e) => setLastName(e.target.value)} required placeholder="Tên" disabled={isLoading} />
-              </div>
-            </>
-          )}
-
-          {/* Trường chung */}
-          <div className="input-wrapper">
-            <FiMail className="input-icon" />
-            <input type="email" className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email" disabled={isLoading} />
-          </div>
-          <div className="input-wrapper">
-            <FiLock className="input-icon" />
-            <input type="password" className="form-input" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Mật khẩu" disabled={isLoading} />
-          </div>
-          
-          {/* Trường xác nhận mật khẩu cho đăng ký */}
-          {isRegisterMode && (
-            <div className="input-wrapper">
-              <FiLock className="input-icon" />
-              <input type="password" className="form-input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required placeholder="Xác nhận mật khẩu" disabled={isLoading} />
-            </div>
-          )}
-
-          <button type="submit" className="login-button" disabled={isLoading}>
-            {isLoading ? <FiLoader className="spinner" /> : (isRegisterMode ? 'Đăng ký' : 'Đăng nhập')}
-          </button>
-        </form>
-
-        <div className="divider">hoặc</div>
-
-        <button className="laoid-button" onClick={handleLaoIDLogin}>
-          <FiGrid />
-          <span>Đăng nhập với LaoID</span>
-        </button>
-
-        <p className="toggle-mode">
-          {isRegisterMode ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
-          <span onClick={toggleMode} className="toggle-mode-link">
-            {isRegisterMode ? 'Đăng nhập ngay' : 'Đăng ký'}
-          </span>
-        </p>
+      <div className="col-md-6 col-lg-4">
+        {error && <div className="alert alert-danger mb-3">{error}</div>}
+        {successMessage && <div className="alert alert-success mb-3">{successMessage}</div>}
+        {isRegisterMode ? renderRegister() : renderLogin()}
       </div>
     </div>
   );
