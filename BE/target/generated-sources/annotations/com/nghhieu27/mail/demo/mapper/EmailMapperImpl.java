@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-07-05T17:17:03+0700",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 21.0.6 (Amazon.com Inc.)"
+    date = "2025-11-27T13:00:33+0700",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 21.0.8 (Eclipse Adoptium)"
 )
 @Component
 public class EmailMapperImpl implements EmailMapper {
@@ -46,6 +46,9 @@ public class EmailMapperImpl implements EmailMapper {
         emailResponse.sub( email.getSub() );
         emailResponse.body( email.getBody() );
         emailResponse.date( email.getDate() );
+        emailResponse.attachmentName( email.getAttachmentName() );
+        emailResponse.attachmentPath( email.getAttachmentPath() );
+        emailResponse.type( email.getType() );
 
         return emailResponse.build();
     }

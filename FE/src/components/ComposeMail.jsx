@@ -1,29 +1,44 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendMail } from '../services/mailApi';
-import { remoteLogger } from '../utils/remoteLogger'; // 🔹 Import logger
+import { remoteLogger } from '../utils/remoteLogger';
+
+// Import CSS và các thành phần icon từ react-icons
+import './ComposeMail.css';
+import { FiSend, FiPaperclip, FiTrash2, FiLoader } from 'react-icons/fi';
 
 function ComposeMail() {
   const [mail, setMail] = useState({ to: '', sub: '', body: '' });
   const [attachment, setAttachment] = useState(null);
   const [error, setError] = useState(null);
+  const [isSending, setIsSending] = useState(false);
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setMail((prev) => ({ ...prev, [name]: value }));
-    remoteLogger.debug(`Field changed: ${name} = ${value}`);
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setAttachment(file);
-    remoteLogger.info(`Attachment selected: ${file?.name}`);
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleDiscard = () => {
+    if (window.confirm('Bạn có chắc chắn muốn hủy thư này không?')) {
+      navigate(-1);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setIsSending(true);
+    setError(null);
     remoteLogger.info('Submit triggered - preparing to send email');
 
     const formData = new FormData();
@@ -35,70 +50,92 @@ function ComposeMail() {
     }
 
     try {
-      remoteLogger.debug(`Sending email to ${mail.to} with subject "${mail.sub}"`);
       await sendMail(formData);
-      remoteLogger.info(`Email sent successfully to ${mail.to}`);
       alert('Email sent successfully!');
       navigate('/sent');
     } catch (err) {
-      console.error(err);
       remoteLogger.error(`Send mail failed: ${err.message}`);
-      setError('Failed to send email');
+      setError('Failed to send email. Please check the recipient address and try again.');
+    } finally {
+      setIsSending(false);
     }
   };
 
   return (
-    <div className="container">
-      <h2>Compose Mail</h2>
+    <div className="compose-container p-4 bg-white rounded shadow-sm">
+      <h4 className="mb-4 border-bottom pb-3">Thư mới</h4>
+      
       {error && <div className="alert alert-danger">{error}</div>}
-      <div className="card p-4">
+
+      <form onSubmit={handleSubmit}>
         <div className="mb-3">
-          <label htmlFor="to" className="form-label">To:</label>
+          <label htmlFor="compose-to" className="form-label">Đến</label>
           <input
             type="email"
             className="form-control"
-            id="to"
+            id="compose-to"
             name="to"
             value={mail.to}
             onChange={handleChange}
+            placeholder="nguoinhan@example.com"
             required
+            disabled={isSending}
           />
         </div>
         <div className="mb-3">
-          <label htmlFor="subject" className="form-label">Subject:</label>
+          <label htmlFor="compose-subject" className="form-label">Chủ đề</label>
           <input
             type="text"
             className="form-control"
-            id="subject"
+            id="compose-subject"
             name="sub"
             value={mail.sub}
             onChange={handleChange}
+            disabled={isSending}
           />
         </div>
         <div className="mb-3">
-          <label htmlFor="body" className="form-label">Body:</label>
+          <label htmlFor="compose-body" className="form-label">Nội dung</label>
           <textarea
             className="form-control"
-            id="body"
+            id="compose-body"
             name="body"
-            rows="5"
+            rows="12"
             value={mail.body}
             onChange={handleChange}
+            disabled={isSending}
           ></textarea>
         </div>
-        <div className="mb-3">
-          <label htmlFor="attachment" className="form-label">Attachment:</label>
-          <input
-            type="file"
-            className="form-control"
-            id="attachment"
-            onChange={handleFileChange}
-          />
+
+        {attachment && (
+          <div className="mb-3 text-muted">
+            <FiPaperclip className="me-2" /> {attachment.name}
+          </div>
+        )}
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+          disabled={isSending}
+        />
+
+        <div className="d-flex justify-content-between">
+          <div>
+            <button type="submit" className="btn btn-primary d-flex align-items-center" disabled={isSending}>
+              {isSending ? <FiLoader className="spinner me-2" /> : <FiSend className="me-2" />}
+              {isSending ? 'Đang gửi...' : 'Gửi'}
+            </button>
+            <button type="button" className="btn btn-outline-secondary ms-2" onClick={handleAttachClick} disabled={isSending}>
+              <FiPaperclip />
+            </button>
+          </div>
+          <button type="button" className="btn btn-outline-danger" onClick={handleDiscard} disabled={isSending}>
+            <FiTrash2 />
+          </button>
         </div>
-        <button className="btn btn-primary" onClick={handleSubmit}>
-          Send
-        </button>
-      </div>
+      </form>
     </div>
   );
 }
