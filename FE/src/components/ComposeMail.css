@@ -1,0 +1,8 @@
+.compose-container {
+    max-width: 900px;
+    margin: auto;
+}
+
+#compose-body {
+    resize: vertical;
+}
